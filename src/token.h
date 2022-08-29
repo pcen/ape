@@ -3,6 +3,7 @@
 #include <string>
 
 enum class TokenType {
+	Invalid,
 	// keywords
 	If,     // if
 	Elif,   // elif
@@ -95,6 +96,7 @@ enum class TokenType {
 	Comment,
 	Number,
 	Identifier,
+	Eof,
 };
 
 std::string getTokenTypeLexeme(TokenType);

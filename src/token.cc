@@ -2,6 +2,7 @@
 
 std::string getTokenTypeLexeme(TokenType tt) {
 	switch (tt) {
+	case TokenType::Invalid:    return "<INVALID>";
 	case TokenType::If:         return "if";
 	case TokenType::Elif:       return "elif";
 	case TokenType::Else:       return "else";
@@ -69,6 +70,7 @@ std::string getTokenTypeLexeme(TokenType tt) {
 	case TokenType::OpenBrack:  return "[";
 	case TokenType::CloseBrack: return "]";
 	case TokenType::Sep:        return ";";
+	case TokenType::Eof:        return "<EOF>";
 	default:
 		return "";
 	}
