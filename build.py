@@ -8,14 +8,16 @@ from pathlib import Path
 FLAGS = ['-std=c++17']
 SRC   = './src'
 TESTS = './test'
-BUILD = './build'
+BIN = './bin'
 ROOT  = Path('./')
 
 # make build directory
-Path(BUILD).touch(exist_ok=True)
-for d in [SRC, TESTS]:
-    dir = Path(BUILD) / d
-    dir.mkdir(exist_ok=True)
+def init_bin_dir():
+    Path(BIN).mkdir(exist_ok=True)
+    for d in [SRC, TESTS]:
+        dir = Path(BIN) / d
+        dir.mkdir(exist_ok=True)
+init_bin_dir()
 
 def run(cmd, *args):
     proc = subprocess.Popen(
@@ -46,7 +48,7 @@ class TU:
 
     @property
     def target(self):
-        return f'{BUILD}/{self.obj}'
+        return f'{BIN}/{self.obj}'
 
     @property
     def stale(self):
@@ -111,10 +113,8 @@ def header_to_tu(header: str):
 
 def build_main(binary: str):
     dag = create_dag(SRC)
-    # main.cc is hard coded
-    obj, src, incs = get_deps('./main.cc')
-    dag[obj] = TU(obj, src, incs)
-    main: TU = dag['main.o']
+    # TODO: take the target translation unit instead of hardcoding
+    main: TU = dag['src/main.o']
     objs = []
     for h in main.incs:
         obj = header_to_tu(h)

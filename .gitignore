@@ -1,8 +1,14 @@
 .vscode
 .DS_Store
 
-build/
+# project
+bin/
 
+# c++
 *.o
 *.out
 ape
+
+# python
+__pycache__/
+*.py[cod]

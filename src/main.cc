@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 
-#include "src/token.h"
-#include "src/lexer.h"
+#include "token.h"
+#include "lexer.h"
 
 int main(int argc, char* argv[]) {
 	std::vector<Token> toks = Lexer().lex("./test/double.ape");

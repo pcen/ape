@@ -1,2 +1,2 @@
 # ape
-To compile main.cc, run `./main.py` or `python3 ./main.py` to create the binary `./ape`.
+To compile main.cc, run `./build.py` or `python3 ./build.py` to create the binary `./ape`.
