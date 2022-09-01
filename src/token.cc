@@ -89,3 +89,11 @@ std::string Token::Lexeme() const {
 	}
 	return lex;
 }
+
+bool operator== (const Token& t1, const Token& t2) {
+	return t1.type == t2.type && t1.Lexeme() == t2.Lexeme();
+}
+
+bool operator!= (const Token& t1, const Token& t2) {
+	return t1.type != t2.type || t1.Lexeme() != t2.Lexeme();
+}

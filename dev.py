@@ -5,20 +5,24 @@ import subprocess
 import sys
 
 from pathlib import Path
-from xml.etree.ElementInclude import include
 
 FLAGS    = ['-std=c++17']
 SRC      = './src'
 TESTS    = './test'
 BUILD    = './build'
-PARALLEL = False
+ROOT     = Path('./').resolve()
+PARALLEL = True
 
-# make build directory
-def init_build_dir():
-    Path(BUILD).mkdir(exist_ok=True)
+def setup():
+    # make build directory
+    build_dir = Path(BUILD)
+    build_dir.mkdir(exist_ok=True)
     for d in [SRC, TESTS]:
-        dir = Path(BUILD) / d
+        dir = build_dir / d
         dir.mkdir(exist_ok=True)
+
+def resolve_path(path: str):
+    return Path(path).resolve().relative_to(ROOT).as_posix()
 
 def run(cmd, *args):
     proc = subprocess.Popen(
@@ -83,10 +87,9 @@ class TU:
         if parallel:
             cores = multiprocessing.cpu_count()
             pool = multiprocessing.Pool(cores)
-            pool.map(TU.compile_tu, tus)
+            res = pool.map(TU.compile_tu, tus)
         else:
-            for tu in tus:
-                tu.compile_tu()
+            res = [tu.compile_tu() for tu in tus]
 
         _, err = run_link(binary, [tu.obj for tu in tus])
         if len(err) > 0:
@@ -95,9 +98,10 @@ class TU:
 def parse_dep_output(output: str):
     obj, deps = output.split(':')
     src, *incs = deps.split()               # source file and included headers
+    src = resolve_path(src)
     name = src.removesuffix('.cc')          # tu identifier
     target = BUILD / Path(src).parent / obj # object output
-    return name, target.as_posix(), src, incs
+    return name, target.as_posix(), src, [resolve_path(inc) for inc in incs]
 
 def get_deps(file):
     out, _ = run('g++', *FLAGS, '-MM', file)
@@ -113,26 +117,39 @@ def run_link(binary, objects):
     print(f'linking {binary} from {objects}')
     return run('g++', *FLAGS, *objects, f'-o{binary}')
 
-def create_dag(dir):
+def create_dag(dirs):
     tree = {}
-    for source in get_files(dir, '*.cc'):
-        name, obj, src, incs = get_deps(source.as_posix())
-        tree[name] = TU(obj, src, incs)
+    for dir in dirs:
+        for source in get_files(dir, '*.cc'):
+            name, obj, src, incs = get_deps(source.as_posix())
+            tree[name] = TU(obj, src, incs)
     return tree
 
 def header_to_tu(header: str):
     return header.removesuffix(".h")
 
-def build_main(binary: str):
-    dag = create_dag(SRC)
-    # TODO: take the target translation unit instead of hardcoding
-    main: TU = dag['src/main']
-    main.compile_binary(binary, dag, PARALLEL)
+def build_executable(target: str, output: str, dirs):
+    dag = create_dag(dirs)
+    tu: TU = dag[target]
+    tu.compile_binary(output, dag, PARALLEL)
+
+def build_main(name: str):
+    build_executable('src/main', name, [SRC])
+
+def build_test(name: str):
+    build_executable(f'test/{name}', name, [TESTS, SRC])
 
 if __name__ == '__main__':
-    init_build_dir()
+    setup()
+    match sys.argv[1:]:
 
-    binary = 'ape'
-    if len(sys.argv) > 1:
-        binary = sys.argv[1]
-    build_main(binary)
+        case ['test', name, *opts]:
+            print(f'building test {name}...')
+            build_test(name)
+
+        case ['main', *opts]:
+            print(f'compiling ape...')
+            build_main('ape')
+
+        case other:
+            print(f'invalid input: {other}')
