@@ -37,6 +37,8 @@ TokenType idToKeyword(const std::string& id) {
 		{"return", TokenType::Return},
 		{"true", TokenType::True},
 		{"false", TokenType::False},
+		{"module", TokenType::Module},
+		{"import", TokenType::Import},
 		{"int", TokenType::Int},
 		{"int8", TokenType::Int8},
 		{"int16", TokenType::Int16},
@@ -62,8 +64,9 @@ TokenType idToKeyword(const std::string& id) {
 Lexer::Lexer()
 	: pos(0) {}
 
-std::vector<Token> Lexer::lex(const std::string& filename) {
-	file = readFile(filename);
+TokenStream* Lexer::lex(const std::string& filename) {
+	this->reset();
+	this->file = readFile(filename);
 	std::vector<Token> tokens;
 	while (true) {
 		Token t = step();
@@ -72,7 +75,25 @@ std::vector<Token> Lexer::lex(const std::string& filename) {
 			break;
 		}
 	}
-	return tokens;
+	return new VectorTokenStream(std::move(tokens));
+}
+
+TokenStream* Lexer::lexString(const std::string& source) {
+	this->reset();
+	this->file = std::vector<char>(source.begin(), source.end());
+	std::vector<Token> tokens;
+	while (true) {
+		Token t = step();
+		tokens.push_back(t);
+		if (t.type == TokenType::Eof || t.type == TokenType::Invalid) {
+			break;
+		}
+	}
+	return new VectorTokenStream(std::move(tokens));
+}
+
+void Lexer::reset() {
+	this->file.clear();
 }
 
 char Lexer::next() {

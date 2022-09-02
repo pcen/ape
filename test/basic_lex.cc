@@ -1,9 +1,9 @@
 #include "../src/lexer.h"
 
 int main(int argc, char* argv[]) {
-	std::vector<Token> tokens = Lexer().lex("test/double.ape");
+	TokenStream* tokens = Lexer().lex("test/double.ape");
 
-	std::vector<Token> expected{
+	VectorTokenStream expected({
 		Token(TokenType::Def),
 		Token(TokenType::Identifier, "twice"),
 		Token(TokenType::OpenParen),
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 		Token(TokenType::Number, "2"),
 		Token(TokenType::CloseBrace),
 		Token(TokenType::Eof),
-	};
+	});
 
-	assert(tokens == expected);
+	assert(*tokens == expected);
 }

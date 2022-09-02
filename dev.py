@@ -6,7 +6,7 @@ import sys
 
 from pathlib import Path
 
-FLAGS    = ['-std=c++17']
+FLAGS    = ['-std=c++17', '-fno-omit-frame-pointer']
 SRC      = './src'
 TESTS    = './test'
 BUILD    = './build'

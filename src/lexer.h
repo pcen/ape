@@ -5,17 +5,16 @@
 #include <string>
 #include <vector>
 
-class ILexer {
-public:
-	virtual std::vector<Token> lex(const std::string& filename) = 0;
-};
-
-class Lexer : public ILexer {
+class Lexer {
 public:
 	Lexer();
-	std::vector<Token> lex(const std::string& filename) override;
+	~Lexer();
+	TokenStream* lex(const std::string& filename);
+	TokenStream* lexString(const std::string& source);
 
 private:
+	void reset();
+
 	char next();
 	char peek();
 	void back();

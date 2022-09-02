@@ -22,6 +22,8 @@ std::string getTokenTypeLexeme(TokenType tt) {
 	case TokenType::Return:     return "return";
 	case TokenType::True:       return "true";
 	case TokenType::False:      return "false";
+	case TokenType::Module:     return "module";
+	case TokenType::Import:     return "import";
 	case TokenType::Int:        return "int";
 	case TokenType::Int8:       return "int8";
 	case TokenType::Int16:      return "int16";
@@ -96,4 +98,31 @@ bool operator== (const Token& t1, const Token& t2) {
 
 bool operator!= (const Token& t1, const Token& t2) {
 	return t1.type != t2.type || t1.Lexeme() != t2.Lexeme();
+}
+
+bool operator==(TokenStream& s1, TokenStream& s2) {
+	while (!s1.done() && !s2.done()) {
+		if (s1.next() != s2.next()) {
+			return false;
+		}
+	}
+	return s1.done() && s2.done();
+}
+
+VectorTokenStream::VectorTokenStream(std::vector<Token>&& tokens)
+	: pos(0), tokens(tokens) {}
+
+bool VectorTokenStream::done() {
+	return pos == tokens.size();
+}
+
+Token VectorTokenStream::next() {
+	if (pos < tokens.size()) {
+		return tokens[pos++];
+	};
+	return Token(TokenType::Invalid);
+}
+
+Token VectorTokenStream::peek() {
+	return tokens[pos];
 }

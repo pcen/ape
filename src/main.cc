@@ -1,12 +1,12 @@
 #include <iostream>
-#include <vector>
 
 #include "token.h"
 #include "lexer.h"
 
 int main(int argc, char* argv[]) {
-	std::vector<Token> toks = Lexer().lex("./test/double.ape");
-	for (auto& t : toks) {
+	auto toks = Lexer().lex("./test/double.ape");
+	while (!toks->done()) {
+		Token t = toks->next();
 		std::cout << "Token: " << t.Lexeme() << std::endl;
 	}
 	return 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 enum class TokenType {
 	Invalid,
@@ -31,6 +32,9 @@ enum class TokenType {
 
 	True,    // true
 	False,   // false
+
+	Module,  // module
+	Import,  // import
 
 	// built-in types
 	Int,    // int
@@ -99,8 +103,6 @@ enum class TokenType {
 	Eof,
 };
 
-std::string getTokenTypeLexeme(TokenType);
-
 struct Token {
 	TokenType type;
 	std::string lexeme;
@@ -112,4 +114,29 @@ struct Token {
 
 	friend bool operator== (const Token&, const Token&);
 	friend bool operator!= (const Token&, const Token&);
+};
+
+// Wrap token stream behind a class so it's easy to switch
+// from lexing the whole file to lexing asynchronously as
+// the next token is requested (ie. for repl)
+class TokenStream {
+public:
+	virtual ~TokenStream() {}
+	virtual bool done() = 0;
+	virtual Token next() = 0;
+	virtual Token peek() = 0;
+
+	friend bool operator== (TokenStream&, TokenStream&);
+};
+
+class VectorTokenStream : public TokenStream {
+public:
+	VectorTokenStream(std::vector<Token>&& tokens);
+	bool done() override;
+	Token next() override;
+	Token peek() override;
+
+private:
+	std::size_t pos;
+	std::vector<Token> tokens;
 };
