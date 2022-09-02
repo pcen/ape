@@ -10,11 +10,13 @@ FLAGS    = ['-std=c++17']
 SRC      = './src'
 TESTS    = './test'
 BUILD    = './build'
+BIN      = './bin'
 ROOT     = Path('./').resolve()
 PARALLEL = True
 
 def setup():
     # make build directory
+    Path(BIN).mkdir(exist_ok=True)
     build_dir = Path(BUILD)
     build_dir.mkdir(exist_ok=True)
     for d in [SRC, TESTS]:
@@ -137,7 +139,7 @@ def build_main(name: str):
     build_executable('src/main', name, [SRC])
 
 def build_test(name: str):
-    build_executable(f'test/{name}', name, [TESTS, SRC])
+    build_executable(f'test/{name}', f'{BIN}/{name}', [TESTS, SRC])
 
 if __name__ == '__main__':
     setup()

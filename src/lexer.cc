@@ -1,6 +1,10 @@
 #include "lexer.h"
 
 #include <fstream>
+#include <unordered_map>
+
+// TODO: some easy optimizations
+// could be implemented from https://v8.dev/blog/scanner
 
 std::vector<char> readFile(const std::string& filename) {
 	std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
@@ -9,6 +13,50 @@ std::vector<char> readFile(const std::string& filename) {
 	std::vector<char> data(size);
 	ifs.read(data.data(), size);
 	return data;
+}
+
+TokenType idToKeyword(const std::string& id) {
+	static std::unordered_map<std::string, TokenType> lookup = {
+		{"if", TokenType::If},
+		{"elif", TokenType::Elif},
+		{"else", TokenType::Else},
+		{"for", TokenType::For},
+		{"while", TokenType::While},
+		{"break", TokenType::Break},
+		{"switch", TokenType::Switch},
+		{"case", TokenType::Case},
+		{"and", TokenType::And},
+		{"or", TokenType::Or},
+		{"type", TokenType::Type},
+		{"class", TokenType::Class},
+		{"def", TokenType::Def},
+		{"public", TokenType::Public},
+		{"private", TokenType::Private},
+		{"var", TokenType::Var},
+		{"let", TokenType::Let},
+		{"return", TokenType::Return},
+		{"true", TokenType::True},
+		{"false", TokenType::False},
+		{"int", TokenType::Int},
+		{"int8", TokenType::Int8},
+		{"int16", TokenType::Int16},
+		{"int32", TokenType::Int32},
+		{"int64", TokenType::Int64},
+		{"uint", TokenType::Uint},
+		{"uint8", TokenType::Uint8},
+		{"uint16", TokenType::Uint16},
+		{"uint32", TokenType::Uint32},
+		{"uint64", TokenType::Uint64},
+		{"bool", TokenType::Bool},
+		{"float", TokenType::Float},
+		{"double", TokenType::Double},
+		{"char", TokenType::Char},
+		{"string", TokenType::String}
+	};
+	if (lookup.find(id) != lookup.end()) {
+		return lookup[id];
+	}
+	return TokenType::Invalid;
 }
 
 Lexer::Lexer()
@@ -71,6 +119,10 @@ Token Lexer::word() {
 	}
 	int end = pos;
 	std::string lexeme(file.begin() + start, file.begin() + end);
+	TokenType keyword = idToKeyword(lexeme);
+	if (keyword != TokenType::Invalid) {
+		return Token(keyword);
+	}
 	return Token(TokenType::Identifier, lexeme);
 }
 
