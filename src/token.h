@@ -125,8 +125,7 @@ public:
 	virtual bool done() = 0;
 	virtual Token next() = 0;
 	virtual Token peek() = 0;
-
-	friend bool operator== (TokenStream&, TokenStream&);
+	virtual std::vector<Token> readFull() = 0;
 };
 
 class VectorTokenStream : public TokenStream {
@@ -135,6 +134,7 @@ public:
 	bool done() override;
 	Token next() override;
 	Token peek() override;
+	std::vector<Token> readFull() override;
 
 private:
 	std::size_t pos;

@@ -1,9 +1,9 @@
 #include "../src/lexer.h"
+#include "../external/googletest/googletest/include/gtest/gtest.h"
 
-int main(int argc, char* argv[]) {
+TEST(Lexer, DoubleDotApe) {
 	TokenStream* tokens = Lexer().lex("test/double.ape");
-
-	VectorTokenStream expected({
+	std::vector<Token> expected{
 		Token(TokenType::Def),
 		Token(TokenType::Identifier, "twice"),
 		Token(TokenType::OpenParen),
@@ -18,7 +18,12 @@ int main(int argc, char* argv[]) {
 		Token(TokenType::Number, "2"),
 		Token(TokenType::CloseBrace),
 		Token(TokenType::Eof),
-	});
+	};
 
-	assert(*tokens == expected);
+	ASSERT_EQ(tokens->readFull(), expected);
+}
+
+int main(int argc, char** argv) {
+	testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
 }

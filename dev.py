@@ -6,11 +6,25 @@ import sys
 
 from pathlib import Path
 
-FLAGS    = ['-std=c++17', '-fno-omit-frame-pointer']
+LIBRARIES = {
+    'gtest': {
+        'lib': 'gtest',
+        'libdir': './build/googletest/lib',
+        'inc': './external/googletest/googletest/include',
+    }
+}
+
+FLAGS   = ['-std=c++17', '-fno-omit-frame-pointer']
+LDFLAGS = []
+for lib in LIBRARIES.values():
+    FLAGS.append(f'-I{lib["inc"]}')
+    LDFLAGS.extend([f'-L{lib["libdir"]}', f'-l{lib["lib"]}'])
+
 SRC      = './src'
 TESTS    = './test'
 BUILD    = './build'
 BIN      = './bin'
+EXTERNAL = Path('./external').resolve()
 ROOT     = Path('./').resolve()
 PARALLEL = True
 
@@ -23,17 +37,24 @@ def setup():
         dir = build_dir / d
         dir.mkdir(exist_ok=True)
 
+def is_external(path: str) -> bool:
+    return EXTERNAL in Path(path).resolve().parents
+
 def resolve_path(path: str):
     return Path(path).resolve().relative_to(ROOT).as_posix()
 
-def run(cmd, *args):
-    proc = subprocess.Popen(
-        [cmd]+list(args),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+def run(cmd, *args, to_console=False):
+    if to_console:
+        proc = subprocess.Popen([cmd]+list(args))
+    else:
+        proc = subprocess.Popen(
+            [cmd]+list(args),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
     out, err = proc.communicate()
-    return out.decode('utf-8'), err.decode('utf-8')
+    if not to_console:
+        return out.decode('utf-8'), err.decode('utf-8')
 
 def ts_or(path: Path, default: float = 0) -> float:
     try:
@@ -84,7 +105,8 @@ class TU:
     def compile_binary(self, binary, dag, parallel: bool) -> bool:
         tus = [self]
         for h in self.incs:
-            tus.append(dag[header_to_tu(h)])
+            if not is_external(h):
+                tus.append(dag[header_to_tu(h)])
 
         if parallel:
             cores = multiprocessing.cpu_count()
@@ -99,6 +121,7 @@ class TU:
 
 def parse_dep_output(output: str):
     obj, deps = output.split(':')
+    deps = ' '.join(deps.split('\\'))       # handle multiline output
     src, *incs = deps.split()               # source file and included headers
     src = resolve_path(src)
     name = src.removesuffix('.cc')          # tu identifier
@@ -117,7 +140,7 @@ def run_compile(src, obj):
 
 def run_link(binary, objects):
     print(f'linking {binary} from {objects}')
-    return run('g++', *FLAGS, *objects, f'-o{binary}')
+    return run('g++', *FLAGS, *LDFLAGS, *objects, f'-o{binary}')
 
 def create_dag(dirs):
     tree = {}
@@ -141,17 +164,42 @@ def build_main(name: str):
 def build_test(name: str):
     build_executable(f'test/{name}', f'{BIN}/{name}', [TESTS, SRC])
 
+def run_test(name: str):
+    run(f'./{BIN}/{name}', to_console=True)
+
+def run_all_tests():
+    tests = []
+    for t in Path(TESTS).glob('*.cc'):
+        name = t.name.removesuffix('.cc')
+        build_test(name)
+        tests.append(name)
+    for t in tests:
+        print(f'=== test {t} ===')
+        run_test(name)
+        print()
+
 if __name__ == '__main__':
     setup()
     match sys.argv[1:]:
 
         case ['test', name, *opts]:
-            print(f'building test {name}...')
-            build_test(name)
+            if name == 'all':
+                print('=== running all tests ===')
+                run_all_tests()
+
+            else:
+                print(f'=== building test {name} ===')
+                build_test(name)
+                print(f'=== running test {name} ===')
+                run_test(name)
 
         case ['main', *opts]:
-            print(f'compiling ape...')
+            print(f'=== compiling main ===')
             build_main('ape')
+
+        case ['gtest' | 'googletest']:
+            print(f'=== building google test ===')
+            run('./gtest.sh', to_console=True)
 
         case other:
             print(f'invalid input: {other}')

@@ -4,6 +4,7 @@
 # project
 build/
 bin/
+install/
 
 # c++
 *.o

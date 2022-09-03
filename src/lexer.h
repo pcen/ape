@@ -8,7 +8,6 @@
 class Lexer {
 public:
 	Lexer();
-	~Lexer();
 	TokenStream* lex(const std::string& filename);
 	TokenStream* lexString(const std::string& source);
 

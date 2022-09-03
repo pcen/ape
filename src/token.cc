@@ -100,15 +100,6 @@ bool operator!= (const Token& t1, const Token& t2) {
 	return t1.type != t2.type || t1.Lexeme() != t2.Lexeme();
 }
 
-bool operator==(TokenStream& s1, TokenStream& s2) {
-	while (!s1.done() && !s2.done()) {
-		if (s1.next() != s2.next()) {
-			return false;
-		}
-	}
-	return s1.done() && s2.done();
-}
-
 VectorTokenStream::VectorTokenStream(std::vector<Token>&& tokens)
 	: pos(0), tokens(tokens) {}
 
@@ -125,4 +116,9 @@ Token VectorTokenStream::next() {
 
 Token VectorTokenStream::peek() {
 	return tokens[pos];
+}
+
+std::vector<Token> VectorTokenStream::readFull() {
+	pos = tokens.size();
+	return tokens;
 }
