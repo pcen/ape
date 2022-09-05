@@ -118,6 +118,27 @@ Token VectorTokenStream::peek() {
 	return tokens[pos];
 }
 
+bool VectorTokenStream::match(TokenType tt) {
+	if (peek().type == tt) {
+		pos++;
+		return true;
+	}
+	return false;
+}
+
+bool VectorTokenStream::match(std::initializer_list<TokenType> tokens) {
+	for (const Token& t : tokens) {
+		if (match(t.type)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+Token VectorTokenStream::prev() {
+	return pos > 0 ? tokens[pos-1] : Token(TokenType::Invalid);
+}
+
 std::vector<Token> VectorTokenStream::readFull() {
 	pos = tokens.size();
 	return tokens;

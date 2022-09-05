@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 enum class TokenType {
 	Invalid,
@@ -103,6 +104,8 @@ enum class TokenType {
 	Eof,
 };
 
+std::string getTokenTypeLexeme(TokenType tt);
+
 struct Token {
 	TokenType type;
 	std::string lexeme;
@@ -125,6 +128,9 @@ public:
 	virtual bool done() = 0;
 	virtual Token next() = 0;
 	virtual Token peek() = 0;
+	virtual bool match(TokenType) = 0;
+	virtual bool match(std::initializer_list<TokenType>) = 0;
+	virtual Token prev() = 0;
 	virtual std::vector<Token> readFull() = 0;
 };
 
@@ -134,6 +140,9 @@ public:
 	bool done() override;
 	Token next() override;
 	Token peek() override;
+	bool match(TokenType) override;
+	bool match(std::initializer_list<TokenType>) override;
+	Token prev() override;
 	std::vector<Token> readFull() override;
 
 private:
