@@ -4,12 +4,11 @@
 #include <iostream> // error reporting
 
 // expression     → equality ;
-// equality       → bitwise ( ( "!=" | "==" ) bitwise )* ;
+// equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 // term           → factor ( ( "-" | "+" | "|" | "^" ) factor )* ;
 // factor         → unary ( ( "/" | "*" | "&" ) unary )* ;
-// unary          → ( "!" | "-" | "~" ) unary
-//                | primary ;
+// unary          → ( "!" | "-" | "~" ) unary | primary ;
 // primary        → NUMBER | STRING | "true" | "false" | group ;
 // group          → "(" expression ")" ;
 
