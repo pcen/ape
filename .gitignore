@@ -9,7 +9,6 @@ install/
 # c++
 *.o
 *.out
-ape
 
 # python
 __pycache__/
