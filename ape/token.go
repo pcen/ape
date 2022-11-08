@@ -24,8 +24,8 @@ const (
 	Def     // def
 	Public  // public
 	Private // private
+	Val     // val
 	Var     // var
-	Let     // let
 
 	Return // return
 
@@ -36,6 +36,8 @@ const (
 	Import // import
 
 	// built-in types
+	// TODO: probably do not need these
+	//       since types are identifiers
 	Int    // int
 	Int8   // int8
 	Int16  // int16
@@ -101,6 +103,37 @@ const (
 	Eof
 )
 
+func GetKeyword(identifier string) (TokenType, bool) {
+	keywords := map[string]TokenType{
+		"if":      If,
+		"elif":    Elif,
+		"else":    Else,
+		"for":     For,
+		"while":   While,
+		"break":   Break,
+		"switch":  Switch,
+		"case":    Case,
+		"and":     And,
+		"or":      Or,
+		"type":    Type,
+		"class":   Class,
+		"def":     Def,
+		"public":  Public,
+		"private": Private,
+		"val":     Val,
+		"var":     Var,
+		"return":  Return,
+		"true":    True,
+		"false":   False,
+		"module":  Module,
+		"import":  Import,
+	}
+	if tt, ok := keywords[identifier]; ok {
+		return tt, true
+	}
+	return Invalid, false
+}
+
 var (
 	tokenLexemes = []string{
 		Invalid: "<INVALID>",
@@ -124,8 +157,8 @@ var (
 		Def:     "def",
 		Public:  "public",
 		Private: "private",
+		Val:     "val",
 		Var:     "var",
-		Let:     "let",
 
 		Return: "return",
 

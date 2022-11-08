@@ -1,5 +1,9 @@
 package ape
 
+// statement -> decl
+// decl -> (VAL | VAR) ident type  "=" expression
+// type -> ident
+
 // expression  -> equality ;
 // equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -10,7 +14,7 @@ package ape
 // group       -> "(" expression ")" ;
 
 type Parser interface {
-	Program() Expression
+	Program() Statement
 }
 
 type parser struct {
@@ -36,13 +40,15 @@ func (p *parser) match(tt ...TokenType) bool {
 	return false
 }
 
-func (p *parser) Program() Expression {
-	expr := p.Expression()
+func (p *parser) Program() Statement {
+	stmt := p.Statement()
 	if p.match(Eof) {
-		return expr
+		return stmt
 	}
 	panic("program must end with <EOF>")
 }
+
+// Expressions
 
 func (p *parser) Expression() Expression {
 	return p.Equality()
@@ -97,4 +103,29 @@ func (p *parser) Group() (expr Expression) {
 	} else {
 		panic("group must end with )")
 	}
+}
+
+// Statements
+
+func (p *parser) Statement() Statement {
+	return p.Decl()
+}
+
+func (p *parser) Decl() Statement {
+	decl := &DeclStmt{}
+	if p.match(Val, Var) {
+		decl.Kind = p.prev().Type
+		if p.match(Identifier) {
+			decl.Ident = p.prev().Lexeme
+		}
+		if p.match(Identifier) {
+			decl.Type = p.prev().Lexeme
+		}
+		if p.match(Assign) {
+			decl.Value = p.Expression()
+		}
+	} else {
+		panic("no val or var keyword")
+	}
+	return decl
 }

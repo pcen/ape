@@ -66,3 +66,16 @@ func (e BinaryOp) ExprStr() string {
 func NewBinaryOp(lhs Expression, op TokenType, rhs Expression) Expression {
 	return BinaryOp{Lhs: lhs, Op: op, Rhs: rhs}
 }
+
+// Statements
+
+type DeclStmt struct {
+	Kind  TokenType // val | var
+	Ident string
+	Type  string
+	Value Expression
+}
+
+func (s DeclStmt) StmtStr() string {
+	return fmt.Sprintf("(%v %v %v %v)", s.Kind, s.Ident, s.Type, s.Value.ExprStr())
+}
