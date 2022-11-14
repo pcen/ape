@@ -97,7 +97,7 @@ func (l *lexer) skipWhiteSpace() {
 }
 
 func (l *lexer) identifier() Token {
-	buf := make([]byte, 16)
+	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
 		if !isalpha(b) && !isdigit(b) && b != '_' {
@@ -106,11 +106,15 @@ func (l *lexer) identifier() Token {
 		}
 		buf = append(buf, b)
 	}
-	return NewLexemeToken(Identifier, string(buf))
+	lexeme := string(buf)
+	if tt, isKeyword := GetKeyword(lexeme); isKeyword {
+		return NewToken(tt)
+	}
+	return NewLexemeToken(Identifier, lexeme)
 }
 
 func (l *lexer) number() Token {
-	buf := make([]byte, 16)
+	buf := make([]byte, 0, 16)
 	dot := false
 	for {
 		b, _ := l.next()
@@ -127,7 +131,7 @@ func (l *lexer) number() Token {
 }
 
 func (l *lexer) comment() Token {
-	buf := make([]byte, 16)
+	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
 		if b == '\r' {
@@ -138,12 +142,11 @@ func (l *lexer) comment() Token {
 		}
 		buf = append(buf, b)
 	}
-
 	return NewLexemeToken(Comment, string(buf))
 }
 
 func (l *lexer) str() Token {
-	buf := make([]byte, 16)
+	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
 		if b == '"' {
