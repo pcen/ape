@@ -1,38 +1,147 @@
 package ape
 
-// statement -> decl
-// decl -> (VAL | VAR) ident type  "=" expression
-// type -> ident
+import (
+	"fmt"
+
+	"github.com/pcen/ape/ape/ast"
+	"github.com/pcen/ape/ape/token"
+)
+
+// program     -> decl*
+
+// decl        -> typedDecl | funcDecl
+
+// typedDecl   -> (VAL | VAR) IDENT type  "=" expression
+// funcDecl    -> "func" IDENT "(" parameters? ")" blockStmt
+
+// parameters  -> (paramDecl ",")*
+// paramDecl   -> IDENT type
+
+// blockStmt   -> "{" statement* "}"
 
 // expression  -> equality ;
-// equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
-// comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-// term        -> factor ( ( "-" | "+" | "|" | "^" ) factor )* ;
-// factor      -> unary ( ( "/" | "*" | "&" ) unary )* ;
-// unary       -> ( "!" | "-" | "~" ) unary | primary ;
-// primary     -> NUMBER | STRING | "true" | "false" | group ;
-// group       -> "(" expression ")" ;
+// equality    -> comparison ( ( "!=" | "==" ) comparison )*
+// comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
+// term        -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
+// factor      -> unary ( ( "/" | "*" | "&" ) unary )*
+// unary       -> ( "!" | "-" | "~" ) unary | call
+// call        -> primary ( "(" arguments? ")" )*
+// primary     -> NUMBER | STRING | IDENT | "true" | "false" | group
+// group       -> "(" expression ")"
+
+// arguments   -> expression ( "," expression ) *
+
+// propagates panic errors that are not ParseError
+func sync(f func()) {
+	err := recover()
+	if _, ok := err.(ParseError); err != nil && !ok {
+		panic(err)
+	}
+	f()
+}
+
+var (
+	declStart = map[token.Kind]bool{
+		token.Val:  true,
+		token.Var:  true,
+		token.Func: true,
+	}
+
+	stmtStart = map[token.Kind]bool{
+		token.Return:    true,
+		token.OpenBrace: true,
+	}
+)
+
+type ParseError struct {
+	Pos    token.Position
+	What   string
+	Parsed ast.Node
+}
+
+func NewParseError(pos token.Position, parsed ast.Node, format string, a ...interface{}) ParseError {
+	return ParseError{Pos: pos, Parsed: parsed, What: fmt.Sprintf(format, a...)}
+}
+
+func (p ParseError) String() string {
+	if p.Parsed == nil {
+		return fmt.Sprintf("%v: %v", p.Pos, p.What)
+	}
+	return fmt.Sprintf("%v: %v, ast: %v", p.Pos, p.What, ast.NodeString(p.Parsed))
+}
 
 type Parser interface {
-	Program() Statement
+	Program() []ast.Node
+	Errors() ([]ParseError, bool)
 }
 
 type parser struct {
-	tokens []Token
+	tokens []token.Token
 	pos    uint
+	errors []ParseError
 }
 
-func NewParser(tokens []Token) Parser {
-	return &parser{tokens: tokens}
+func NewParser(tokens []token.Token) Parser {
+	return &parser{
+		tokens: tokens,
+		errors: make([]ParseError, 0),
+	}
 }
 
-func (p *parser) prev() Token {
+func (p *parser) Errors() ([]ParseError, bool) {
+	return p.errors, len(p.errors) > 0
+}
+
+func (p *parser) errExpected(kind token.Kind, parsed ast.Node, context string) {
+	pos, got := p.prev().Position, p.prev().String()
+	err := NewParseError(pos, parsed, fmt.Sprintf("%v: expected %v, got %v parsing %v", pos, kind, got, context))
+	p.errors = append(p.errors, err)
+	panic(err)
+}
+
+func (p *parser) err(parsed ast.Node, format string, args ...interface{}) {
+	err := NewParseError(p.prev().Position, parsed, fmt.Sprintf(format, args...))
+	p.errors = append(p.errors, err)
+	panic(err)
+}
+
+func (p *parser) skipTo(tokens map[token.Kind]bool) bool {
+	for {
+		kind := p.peek().Kind
+		if kind == token.Eof {
+			return false
+		}
+		if _, ok := tokens[kind]; ok {
+			return true
+		}
+		p.next()
+	}
+}
+
+func (p *parser) peek() token.Token {
+	return p.tokens[p.pos]
+}
+
+func (p *parser) next() token.Token {
+	p.pos++
 	return p.tokens[p.pos-1]
 }
 
-func (p *parser) match(tt ...TokenType) bool {
-	for _, t := range tt {
-		if p.tokens[p.pos].Type == t {
+func (p *parser) consume(tk token.Kind, parsed ast.Node, context string) {
+	if p.tokens[p.pos].Kind == tk {
+		p.pos++
+		return
+	}
+	p.errExpected(tk, parsed, context)
+}
+
+func (p *parser) prev() token.Token {
+	return p.tokens[p.pos-1]
+}
+
+func (p *parser) match(tk ...token.Kind) bool {
+	for _, t := range tk {
+		if p.tokens[p.pos].Kind == t {
 			p.pos++
 			return true
 		}
@@ -40,92 +149,210 @@ func (p *parser) match(tt ...TokenType) bool {
 	return false
 }
 
-func (p *parser) Program() Statement {
-	stmt := p.Statement()
-	if p.match(Eof) {
-		return stmt
+func (p *parser) Program() (program []ast.Node) {
+	for !p.match(token.Eof) {
+		program = append(program, p.Declaration())
 	}
-	panic("program must end with <EOF>")
+	return program
 }
 
 // Expressions
 
-func (p *parser) Expression() Expression {
+func (p *parser) Expression() ast.Expression {
 	return p.Equality()
 }
 
-func (p *parser) leftAssociativeBinaryOp(rule func() Expression, types ...TokenType) Expression {
+func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...token.Kind) ast.Expression {
 	lhs := rule()
 	for p.match(types...) {
-		lhs = NewBinaryOp(lhs, p.prev().Type, rule())
+		lhs = ast.NewBinaryOp(lhs, p.prev().Kind, rule())
 	}
 	return lhs
 }
 
-func (p *parser) Equality() Expression {
-	return p.leftAssociativeBinaryOp(p.Comparison, Equal, NotEqual)
+func (p *parser) Equality() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Comparison, token.Equal, token.NotEqual)
 }
 
-func (p *parser) Comparison() Expression {
-	return p.leftAssociativeBinaryOp(p.Term, Greater, GreaterEq, Less, LessEq)
+func (p *parser) Comparison() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Term, token.Greater, token.GreaterEq, token.Less, token.LessEq)
 }
 
-func (p *parser) Term() Expression {
-	return p.leftAssociativeBinaryOp(p.Factor, Minus, Plus, BitOr, BitXOR)
+func (p *parser) Term() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Factor, token.Minus, token.Plus, token.BitOr, token.BitXOR)
 }
 
-func (p *parser) Factor() Expression {
-	return p.leftAssociativeBinaryOp(p.Unary, Divide, Star, BitAnd)
+func (p *parser) Factor() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.BitAnd)
 }
 
-func (p *parser) Unary() Expression {
-	if p.match(Bang, Minus, BitNegate) {
-		return NewUnaryOp(p.prev().Type, p.Unary())
+func (p *parser) Unary() ast.Expression {
+	switch p.peek().Kind {
+	case token.Bang, token.Minus, token.BitNegate:
+		return ast.NewUnaryOp(p.next().Kind, p.Unary())
+	default:
+		return p.CallExpr()
 	}
-	return p.Primary()
 }
 
-func (p *parser) Primary() Expression {
-	if p.match(Number, String, True, False) {
-		return NewLiteralExpr(p.prev())
+func (p *parser) CallExpr() ast.Expression {
+	primary := p.Primary()
+	if p.match(token.OpenParen) {
+		args := p.Arguments()
+		p.consume(token.CloseParen, primary, "end of call expr")
+		return &ast.CallExpr{
+			Callee: primary,
+			Args:   args,
+		}
 	}
-	return p.Group()
+	return primary
 }
 
-func (p *parser) Group() (expr Expression) {
-	if p.match(OpenParen) {
-		expr = p.Expression()
-	} else {
-		panic("group must start with (")
+func (p *parser) Arguments() (args []ast.Expression) {
+	if p.peek().Kind == token.CloseParen {
+		// empty argument list
+		return args
 	}
-	if p.match(CloseParen) {
-		return expr
-	} else {
-		panic("group must end with )")
+	for {
+		args = append(args, p.Expression())
+		if !p.match(token.Comma) {
+			return args
+		}
 	}
+}
+
+func (p *parser) Primary() ast.Expression {
+	switch kind := p.peek().Kind; kind {
+	case token.Number, token.String, token.True, token.False:
+		return ast.NewLiteralExpr(p.next())
+	case token.Identifier:
+		return ast.NewIdentExpr(p.next())
+	case token.OpenParen:
+		return p.GroupExpr()
+	default:
+		p.err(nil, "invalid token for expression: %v", p.peek())
+		return nil // err unwinds stack
+	}
+}
+
+func (p *parser) GroupExpr() (expr ast.Expression) {
+	p.consume(token.OpenParen, nil, "start of group expr")
+	expr = p.Expression()
+	p.consume(token.CloseParen, expr, "end of group expr")
+	return &ast.GroupExpr{Expr: expr}
 }
 
 // Statements
 
-func (p *parser) Statement() Statement {
-	return p.Decl()
+func (p *parser) Statement() (s ast.Statement) {
+	defer sync(func() {
+		s = &ast.ErrStmt{}
+		p.skipTo(stmtStart)
+	})
+	switch p.peek().Kind {
+	case token.Return:
+		s = p.ReturnStmt()
+	case token.OpenBrace:
+		s = p.BlockStmt()
+	default:
+		s = p.ExprStmt()
+	}
+	return s
 }
 
-func (p *parser) Decl() Statement {
-	decl := &DeclStmt{}
-	if p.match(Val, Var) {
-		decl.Kind = p.prev().Type
-		if p.match(Identifier) {
-			decl.Ident = p.prev().Lexeme
+func (p *parser) ReturnStmt() *ast.ReturnStmt {
+	p.consume(token.Return, nil, "return stmt")
+	return &ast.ReturnStmt{Expr: p.Expression()}
+}
+
+func (p *parser) BlockStmt() *ast.BlockStmt {
+	content := make([]ast.Statement, 0)
+	p.consume(token.OpenBrace, nil, "block stmt opening")
+	for !p.match(token.CloseBrace) {
+		content = append(content, p.Statement())
+	}
+	return &ast.BlockStmt{Content: content}
+}
+
+func (p *parser) ExprStmt() ast.Statement {
+	return &ast.ExprStmt{Expr: p.Expression()}
+}
+
+// Declarations
+
+func (p *parser) Declaration() (d ast.Declaration) {
+	defer sync(func() {
+		d = &ast.ErrDecl{}
+		p.skipTo(declStart)
+	})
+	switch kind := p.peek().Kind; kind {
+	case token.Val, token.Var:
+		d = p.TypedDecl()
+	case token.Func:
+		d = p.FuncDecl()
+	default:
+		panic(fmt.Sprintf("%v not a declaration start", kind))
+	}
+	return d
+}
+
+func (p *parser) Parameters() (decls []*ast.ParamDecl) {
+	if p.peek().Kind == token.CloseParen {
+		return decls // empty parameter list
+	}
+	for {
+		decls = append(decls, p.ParamDecl())
+		if !p.match(token.Comma) {
+			return decls
 		}
-		if p.match(Identifier) {
+	}
+}
+
+func (p *parser) ParamDecl() *ast.ParamDecl {
+	decl := &ast.ParamDecl{}
+	if p.match(token.Identifier) {
+		decl.Ident = p.prev()
+	}
+	if p.match(token.Identifier) {
+		decl.Type = p.prev().Lexeme
+	}
+	return decl
+}
+
+func (p *parser) TypedDecl() ast.Declaration {
+	decl := &ast.TypedDecl{}
+	if p.match(token.Val, token.Var) {
+		decl.Kind = p.prev().Kind
+
+		if p.match(token.Identifier) {
+			decl.Ident = p.prev()
+		}
+
+		if p.match(token.Identifier) {
 			decl.Type = p.prev().Lexeme
+		} else {
+			p.err(decl, "missing type for variable declaration %v", decl.Ident)
 		}
-		if p.match(Assign) {
+
+		if p.match(token.Assign) {
 			decl.Value = p.Expression()
 		}
 	} else {
-		panic("no val or var keyword")
+		p.err(decl, "missing val or var for typed decl")
 	}
 	return decl
+}
+
+func (p *parser) FuncDecl() ast.Declaration {
+	fd := &ast.FuncDecl{}
+	p.consume(token.Func, nil, "function declaration start")
+	if p.match(token.Identifier) {
+		fd.Name = p.prev()
+	}
+	if p.match(token.OpenParen) {
+		fd.Params = p.Parameters()
+	}
+	p.consume(token.CloseParen, fd, "end of function signature parameters")
+	fd.Body = p.BlockStmt()
+	return fd
 }

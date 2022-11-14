@@ -1,9 +1,11 @@
-package ape
+package token
 
-type TokenType int
+import "fmt"
+
+type Kind int
 
 const (
-	Invalid TokenType = iota + 1
+	Invalid Kind = iota + 1
 	// keywords
 	If   // if
 	Elif // elif
@@ -21,7 +23,7 @@ const (
 
 	Type    // type
 	Class   // class
-	Def     // def
+	Func    // func
 	Public  // public
 	Private // private
 	Val     // val
@@ -35,24 +37,7 @@ const (
 	Module // module
 	Import // import
 
-	// built-in types
-	// TODO: probably do not need these
-	//       since types are identifiers
-	Int    // int
-	Int8   // int8
-	Int16  // int16
-	Int32  // int32
-	Int64  // int64
-	Uint   // uint
-	Uint8  // uint8
-	Uint16 // uint16
-	Uint32 // uint32
-	Uint64 // uint64
-	Bool   // bool
-	Float  // float
-	Double // double
-	Char   // char
-	String // string
+	String // string literal
 
 	// arithmetic
 	Plus     // +
@@ -103,37 +88,6 @@ const (
 	Eof
 )
 
-func GetKeyword(identifier string) (TokenType, bool) {
-	keywords := map[string]TokenType{
-		"if":      If,
-		"elif":    Elif,
-		"else":    Else,
-		"for":     For,
-		"while":   While,
-		"break":   Break,
-		"switch":  Switch,
-		"case":    Case,
-		"and":     And,
-		"or":      Or,
-		"type":    Type,
-		"class":   Class,
-		"def":     Def,
-		"public":  Public,
-		"private": Private,
-		"val":     Val,
-		"var":     Var,
-		"return":  Return,
-		"true":    True,
-		"false":   False,
-		"module":  Module,
-		"import":  Import,
-	}
-	if tt, ok := keywords[identifier]; ok {
-		return tt, true
-	}
-	return Invalid, false
-}
-
 var (
 	tokenLexemes = []string{
 		Invalid: "<INVALID>",
@@ -154,7 +108,7 @@ var (
 
 		Type:    "type",
 		Class:   "class",
-		Def:     "def",
+		Func:    "func",
 		Public:  "public",
 		Private: "private",
 		Val:     "val",
@@ -168,20 +122,6 @@ var (
 		Module: "module",
 		Import: "import",
 
-		Int:    "int",
-		Int8:   "int8",
-		Int16:  "int16",
-		Int32:  "int32",
-		Int64:  "int64",
-		Uint:   "uint",
-		Uint8:  "uint8",
-		Uint16: "uint16",
-		Uint32: "uint32",
-		Uint64: "uint64",
-		Bool:   "bool",
-		Float:  "float",
-		Double: "double",
-		Char:   "char",
 		String: "string",
 
 		Plus:     "+",
@@ -225,31 +165,80 @@ var (
 
 		Eof: "<EOF>",
 	}
+
+	keywords = map[string]Kind{
+		"if":      If,
+		"elif":    Elif,
+		"else":    Else,
+		"for":     For,
+		"while":   While,
+		"break":   Break,
+		"switch":  Switch,
+		"case":    Case,
+		"and":     And,
+		"or":      Or,
+		"type":    Type,
+		"class":   Class,
+		"func":    Func,
+		"public":  Public,
+		"private": Private,
+		"val":     Val,
+		"var":     Var,
+		"return":  Return,
+		"true":    True,
+		"false":   False,
+		"module":  Module,
+		"import":  Import,
+	}
 )
 
-func (tt TokenType) String() string {
+func GetKeyword(identifier string) (Kind, bool) {
+	if tt, ok := keywords[identifier]; ok {
+		return tt, true
+	}
+	return Invalid, false
+}
+
+func (tt Kind) String() string {
 	if tt == 0 {
 		panic("no string for 0 initialized TokenType")
 	}
 	return tokenLexemes[tt]
 }
 
+type Position struct {
+	Line   uint
+	Column uint
+}
+
+func (p Position) String() string {
+	return fmt.Sprintf("%v:%v", p.Line, p.Column)
+}
+
 type Token struct {
-	Type   TokenType
+	Kind   Kind
 	Lexeme string
+	Position
 }
 
 func (t Token) String() string {
 	if t.Lexeme != "" {
 		return t.Lexeme
 	}
-	return t.Type.String()
+	return t.Kind.String()
 }
 
-func NewToken(tokenType TokenType) Token {
-	return Token{Type: tokenType}
+func New(tokenType Kind, position Position) Token {
+	return Token{
+		Kind:     tokenType,
+		Position: position,
+	}
 }
 
-func NewLexemeToken(tokenType TokenType, lexeme string) Token {
-	return Token{Type: tokenType, Lexeme: lexeme}
+func NewLexeme(tokenType Kind, lexeme string, position Position) Token {
+	return Token{
+		Kind:     tokenType,
+		Lexeme:   lexeme,
+		Position: position,
+	}
 }
