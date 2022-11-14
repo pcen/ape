@@ -16,6 +16,6 @@ func main() {
 	tokens := lexer.LexFile(file)
 	fmt.Printf("tokens in %v\n", file)
 	for _, tok := range tokens {
-		fmt.Printf("%v\n", tok)
+		fmt.Printf("pos: %v\tlex: %v\n", tok.Position, tok)
 	}
 }

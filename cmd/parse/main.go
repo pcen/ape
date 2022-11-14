@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/pcen/ape/ape"
+	"github.com/pcen/ape/ape/ast"
 )
 
 func main() {
@@ -14,12 +15,15 @@ func main() {
 	file := os.Args[1]
 	lexer := ape.NewLexer()
 	tokens := lexer.LexFile(file)
-	for _, t := range tokens {
-		fmt.Printf("%v: %v\n", t.Type, t.Lexeme)
-	}
 
 	parser := ape.NewParser(tokens)
-	expr := parser.Program()
+	prog := parser.Program()
 	fmt.Println("ast:")
-	fmt.Println(expr.StmtStr())
+	ast.PrintSlice(prog)
+
+	if errors, ok := parser.Errors(); ok {
+		for _, err := range errors {
+			fmt.Println(err)
+		}
+	}
 }

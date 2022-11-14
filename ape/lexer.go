@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"strings"
 	"unicode"
+
+	"github.com/pcen/ape/ape/token"
 )
 
 func isalpha(b byte) bool {
@@ -20,29 +23,57 @@ func iswspace(b byte) bool {
 }
 
 type Lexer interface {
-	LexFile(string) []Token
+	LexFile(string) []token.Token
+	LexString(string) []token.Token
 }
 
 func NewLexer() Lexer {
-	return &lexer{}
+	return &lexer{
+		pos: token.Position{
+			Line: 1,
+			// column index of the next char to read
+			// real column number of the most recent char
+			Column: 0,
+		},
+	}
 }
 
 type lexer struct {
-	r   bufio.Reader
-	pos uint
+	r       *bufio.Reader
+	prev    byte
+	pos     token.Position
+	prevPos token.Position
+	done    bool
 }
 
-func (l *lexer) LexFile(file string) []Token {
+func (l *lexer) NewToken(kind token.Kind) token.Token {
+	return token.New(kind, l.pos)
+}
+
+func (l *lexer) NewLexemeToken(kind token.Kind, lexeme string) token.Token {
+	return token.NewLexeme(kind, lexeme, l.pos)
+}
+
+func (l *lexer) LexFile(file string) []token.Token {
 	f, err := os.Open(file)
 	if err != nil {
 		panic(err)
 	}
-	l.r = *bufio.NewReader(f)
-	var tokens []Token
+	l.r = bufio.NewReader(f)
+	return l.lex()
+
+}
+
+func (l *lexer) LexString(source string) []token.Token {
+	l.r = bufio.NewReader(strings.NewReader(source))
+	return l.lex()
+}
+
+func (l *lexer) lex() (tokens []token.Token) {
 	for {
-		token := l.step()
-		tokens = append(tokens, token)
-		if token.Type == Eof {
+		tok := l.step()
+		tokens = append(tokens, tok)
+		if tok.Kind == token.Eof {
 			break
 		}
 	}
@@ -50,19 +81,44 @@ func (l *lexer) LexFile(file string) []Token {
 }
 
 func (l *lexer) next() (byte, bool) {
-	b, err := l.r.ReadByte()
-	if err == io.EOF {
+	if l.done {
 		return 0, false
 	}
-	l.pos++
+
+	b, err := l.r.ReadByte()
+	if err == io.EOF {
+		l.done = true
+		return 0, false
+	} else if err != nil {
+		panic(err)
+	}
+
+	if b == '\n' {
+		l.prevPos = l.pos
+		l.pos.Line++
+		l.pos.Column = 0
+	} else {
+		l.pos.Column++
+	}
+	l.prev = b
 	return b, true
 }
 
 func (l *lexer) back() {
+	if l.done {
+		return
+	}
+
+	// TODO: this fails if back is ever called successively
+	//       make sure this cannot occur
 	if err := l.r.UnreadByte(); err != nil {
 		panic(err)
 	}
-	l.pos--
+	if l.prev == '\n' {
+		l.pos = l.prevPos
+	} else {
+		l.pos.Column--
+	}
 }
 
 func (l *lexer) peek() byte {
@@ -73,30 +129,34 @@ func (l *lexer) peek() byte {
 }
 
 func (l *lexer) match(b byte) bool {
-	return l.peek() == b
-}
-
-func (l *lexer) pick(b byte, onMatch TokenType, noMatch TokenType) Token {
-	if l.match(b) {
-		return NewToken(onMatch)
+	isMatch := l.peek() == b
+	if isMatch {
+		l.next() // consume matching token
 	}
-	return NewToken(noMatch)
+	return isMatch
 }
 
-func (l *lexer) skipWhiteSpace() {
+func (l *lexer) pick(b byte, onMatch token.Kind, noMatch token.Kind) token.Token {
+	if l.match(b) {
+		return l.NewToken(onMatch)
+	}
+	return l.NewToken(noMatch)
+}
+
+func (l *lexer) skipWhiteSpace() bool {
 	for {
 		b, ok := l.next()
 		if !ok {
-			return
+			return true
 		}
 		if !iswspace(b) {
 			l.back()
-			return
+			return false
 		}
 	}
 }
 
-func (l *lexer) identifier() Token {
+func (l *lexer) identifier() token.Token {
 	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
@@ -107,13 +167,13 @@ func (l *lexer) identifier() Token {
 		buf = append(buf, b)
 	}
 	lexeme := string(buf)
-	if tt, isKeyword := GetKeyword(lexeme); isKeyword {
-		return NewToken(tt)
+	if kind, keyword := token.GetKeyword(lexeme); keyword {
+		return l.NewToken(kind)
 	}
-	return NewLexemeToken(Identifier, lexeme)
+	return l.NewLexemeToken(token.Identifier, lexeme)
 }
 
-func (l *lexer) number() Token {
+func (l *lexer) number() token.Token {
 	buf := make([]byte, 0, 16)
 	dot := false
 	for {
@@ -127,10 +187,10 @@ func (l *lexer) number() Token {
 		}
 		buf = append(buf, b)
 	}
-	return NewLexemeToken(Number, string(buf))
+	return l.NewLexemeToken(token.Number, string(buf))
 }
 
-func (l *lexer) comment() Token {
+func (l *lexer) comment() token.Token {
 	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
@@ -142,10 +202,10 @@ func (l *lexer) comment() Token {
 		}
 		buf = append(buf, b)
 	}
-	return NewLexemeToken(Comment, string(buf))
+	return l.NewLexemeToken(token.Comment, string(buf))
 }
 
-func (l *lexer) str() Token {
+func (l *lexer) str() token.Token {
 	buf := make([]byte, 0, 16)
 	for {
 		b, _ := l.next()
@@ -154,22 +214,15 @@ func (l *lexer) str() Token {
 		}
 		buf = append(buf, b)
 	}
-	return NewLexemeToken(String, string(buf))
+	return l.NewLexemeToken(token.String, string(buf))
 }
 
-func (l *lexer) step() Token {
-	l.skipWhiteSpace()
-
-	b, err := l.r.ReadByte()
-	switch err {
-	case io.EOF:
-		return NewToken(Eof)
-	case nil:
-		break
-	default:
-		panic(err)
+func (l *lexer) step() token.Token {
+	atEof := l.skipWhiteSpace()
+	if atEof {
+		return l.NewToken(token.Eof)
 	}
-
+	b, _ := l.next()
 	if isalpha(b) || b == '_' {
 		// variable or keyword
 		l.back()
@@ -191,81 +244,84 @@ func (l *lexer) step() Token {
 
 	case '+':
 		if l.match('=') {
-			return NewToken(PlusEq)
+			return l.NewToken(token.PlusEq)
 		} else if l.match('+') {
-			return NewToken(Increment)
+			return l.NewToken(token.Increment)
 		}
-		return NewToken(Plus)
+		return l.NewToken(token.Plus)
 
 	case '-':
 		if l.match('=') {
-			return NewToken(MinusEq)
+			return l.NewToken(token.MinusEq)
 		} else if l.match('-') {
-			NewToken(Decrement)
+			l.NewToken(token.Decrement)
 		}
-		return NewToken(Minus)
+		return l.NewToken(token.Minus)
 
 	case '/':
-		return l.pick('=', DivideEq, Divide)
+		return l.pick('=', token.DivideEq, token.Divide)
 
 	case '*':
 		if l.match('*') {
-			return l.pick('=', PowerEq, Power)
+			return l.pick('=', token.PowerEq, token.Power)
 		}
-		return l.pick('=', StarEq, Star)
+		return l.pick('=', token.StarEq, token.Star)
 
 	case '=':
-		return l.pick('=', Equal, Assign)
+		return l.pick('=', token.Equal, token.Assign)
 
 	case '!':
-		return l.pick('=', NotEqual, Bang)
+		return l.pick('=', token.NotEqual, token.Bang)
 
 	case '<':
-		return l.pick('=', LessEq, Less)
+		return l.pick('=', token.LessEq, token.Less)
 
 	case '>':
-		return l.pick('=', GreaterEq, Greater)
+		return l.pick('=', token.GreaterEq, token.Greater)
 
 	case '&':
-		return NewToken(BitAnd)
+		return l.NewToken(token.BitAnd)
 
 	case '|':
-		return NewToken(BitOr)
+		return l.NewToken(token.BitOr)
 
 	case '~':
-		return NewToken(BitNegate)
+		return l.NewToken(token.BitNegate)
 
 	case '^':
-		return NewToken(BitXOR)
+		return l.NewToken(token.BitXOR)
 
 	case '.':
-		return NewToken(Dot)
+		return l.NewToken(token.Dot)
 
 	case ',':
-		return NewToken(Comma)
+		return l.NewToken(token.Comma)
 
 	case '(':
-		return NewToken(OpenParen)
+		return l.NewToken(token.OpenParen)
 
 	case ')':
-		return NewToken(CloseParen)
+		return l.NewToken(token.CloseParen)
 
 	case '{':
-		return NewToken(OpenBrace)
+		return l.NewToken(token.OpenBrace)
 
 	case '}':
-		return NewToken(CloseBrace)
+		return l.NewToken(token.CloseBrace)
 
 	case '[':
-		return NewToken(OpenBrack)
+		return l.NewToken(token.OpenBrack)
 
 	case ']':
-		return NewToken(CloseBrack)
+		return l.NewToken(token.CloseBrack)
 
-	case ';': // always separates statements
-		return NewToken(Sep)
+	case ';':
+		// TODO: if ; is optional to separate statements
+		//       this token needs to be inserted at certain
+		//       places in the token stream for parsing to work
+		return l.NewToken(token.Sep)
 
 	}
 
-	return NewToken(Invalid)
+	return l.NewToken(token.Invalid)
 }
