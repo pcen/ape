@@ -10,11 +10,11 @@ type Expression interface {
 	ExprStr() string
 }
 
-type InvalidExpr struct {
+type ErrExpr struct {
 	What string
 }
 
-func (e *InvalidExpr) ExprStr() string {
+func (e *ErrExpr) ExprStr() string {
 	return fmt.Sprintf("error: %v", e.What)
 }
 

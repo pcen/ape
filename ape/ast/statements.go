@@ -9,6 +9,12 @@ type Statement interface {
 	StmtStr() string
 }
 
+type ErrStmt struct{}
+
+func (s *ErrStmt) StmtStr() string {
+	return "err"
+}
+
 type BlockStmt struct {
 	Content []Statement
 }

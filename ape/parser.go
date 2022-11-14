@@ -31,25 +31,43 @@ import (
 
 // arguments   -> expression ( "," expression ) *
 
+// propagates panic errors that are not ParseError
+func sync(f func()) {
+	err := recover()
+	if _, ok := err.(ParseError); err != nil && !ok {
+		panic(err)
+	}
+	f()
+}
+
 var (
 	declStart = map[token.Kind]bool{
 		token.Val:  true,
 		token.Var:  true,
 		token.Func: true,
 	}
+
+	stmtStart = map[token.Kind]bool{
+		token.Return:    true,
+		token.OpenBrace: true,
+	}
 )
 
 type ParseError struct {
-	Pos  token.Position
-	What string
+	Pos    token.Position
+	What   string
+	Parsed ast.Node
 }
 
-func NewParseError(pos token.Position, format string, a ...interface{}) ParseError {
-	return ParseError{Pos: pos, What: fmt.Sprintf(format, a...)}
+func NewParseError(pos token.Position, parsed ast.Node, format string, a ...interface{}) ParseError {
+	return ParseError{Pos: pos, Parsed: parsed, What: fmt.Sprintf(format, a...)}
 }
 
 func (p ParseError) String() string {
-	return fmt.Sprintf("%v: %v", p.Pos, p.What)
+	if p.Parsed == nil {
+		return fmt.Sprintf("%v: %v", p.Pos, p.What)
+	}
+	return fmt.Sprintf("%v: %v, ast: %v", p.Pos, p.What, ast.NodeString(p.Parsed))
 }
 
 type Parser interface {
@@ -74,17 +92,15 @@ func (p *parser) Errors() ([]ParseError, bool) {
 	return p.errors, len(p.errors) > 0
 }
 
-func (p *parser) errExpected(kind token.Kind, context string) {
-	pos := p.prev().Position
-	got := p.prev().String()
-	err := NewParseError(pos, fmt.Sprintf("%v: expected %v, got %v parsing %v", pos, kind, got, context))
+func (p *parser) errExpected(kind token.Kind, parsed ast.Node, context string) {
+	pos, got := p.prev().Position, p.prev().String()
+	err := NewParseError(pos, parsed, fmt.Sprintf("%v: expected %v, got %v parsing %v", pos, kind, got, context))
 	p.errors = append(p.errors, err)
 	panic(err)
 }
 
-func (p *parser) err(format string, args ...interface{}) {
-	pos := p.prev().Position
-	err := NewParseError(pos, fmt.Sprintf(format, args...))
+func (p *parser) err(parsed ast.Node, format string, args ...interface{}) {
+	err := NewParseError(p.prev().Position, parsed, fmt.Sprintf(format, args...))
 	p.errors = append(p.errors, err)
 	panic(err)
 }
@@ -111,12 +127,12 @@ func (p *parser) next() token.Token {
 	return p.tokens[p.pos-1]
 }
 
-func (p *parser) consume(tk token.Kind, context string) {
+func (p *parser) consume(tk token.Kind, parsed ast.Node, context string) {
 	if p.tokens[p.pos].Kind == tk {
 		p.pos++
 		return
 	}
-	p.errExpected(tk, context)
+	p.errExpected(tk, parsed, context)
 }
 
 func (p *parser) prev() token.Token {
@@ -149,12 +165,7 @@ func (p *parser) Expression() ast.Expression {
 func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...token.Kind) ast.Expression {
 	lhs := rule()
 	for p.match(types...) {
-		op := p.prev().Kind
-		rhs := rule()
-		if err, ok := rhs.(*ast.InvalidExpr); ok {
-			fmt.Printf("invalid operand, expected expression for binary operator: %v\n", err.What)
-		}
-		lhs = ast.NewBinaryOp(lhs, op, rhs)
+		lhs = ast.NewBinaryOp(lhs, p.prev().Kind, rule())
 	}
 	return lhs
 }
@@ -186,16 +197,14 @@ func (p *parser) Unary() ast.Expression {
 
 func (p *parser) CallExpr() ast.Expression {
 	primary := p.Primary()
-
 	if p.match(token.OpenParen) {
 		args := p.Arguments()
-		p.consume(token.CloseParen, "expect \")\" at end of call")
+		p.consume(token.CloseParen, primary, "end of call expr")
 		return &ast.CallExpr{
 			Callee: primary,
 			Args:   args,
 		}
 	}
-
 	return primary
 }
 
@@ -213,7 +222,7 @@ func (p *parser) Arguments() (args []ast.Expression) {
 }
 
 func (p *parser) Primary() ast.Expression {
-	switch p.peek().Kind {
+	switch kind := p.peek().Kind; kind {
 	case token.Number, token.String, token.True, token.False:
 		return ast.NewLiteralExpr(p.next())
 	case token.Identifier:
@@ -221,27 +230,25 @@ func (p *parser) Primary() ast.Expression {
 	case token.OpenParen:
 		return p.GroupExpr()
 	default:
-		return &ast.InvalidExpr{}
+		p.err(nil, "invalid token for expression: %v", p.peek())
+		return nil // err unwinds stack
 	}
 }
 
 func (p *parser) GroupExpr() (expr ast.Expression) {
-	p.consume(token.OpenParen, "group starts with '('")
+	p.consume(token.OpenParen, nil, "start of group expr")
 	expr = p.Expression()
-	p.consume(token.CloseParen, "group ends with ')'")
+	p.consume(token.CloseParen, expr, "end of group expr")
 	return &ast.GroupExpr{Expr: expr}
 }
 
 // Statements
 
 func (p *parser) Statement() (s ast.Statement) {
-	defer func() {
-		if err, ok := recover().(ParseError); ok {
-			fmt.Println("parser: error parsing statement:")
-			fmt.Println(err)
-		}
-		s = nil
-	}()
+	defer sync(func() {
+		s = &ast.ErrStmt{}
+		p.skipTo(stmtStart)
+	})
 	switch p.peek().Kind {
 	case token.Return:
 		s = p.ReturnStmt()
@@ -254,13 +261,13 @@ func (p *parser) Statement() (s ast.Statement) {
 }
 
 func (p *parser) ReturnStmt() *ast.ReturnStmt {
-	p.consume(token.Return, "return statement begins with \"return\"")
+	p.consume(token.Return, nil, "return stmt")
 	return &ast.ReturnStmt{Expr: p.Expression()}
 }
 
 func (p *parser) BlockStmt() *ast.BlockStmt {
 	content := make([]ast.Statement, 0)
-	p.consume(token.OpenBrace, "block begins with \"{\"")
+	p.consume(token.OpenBrace, nil, "block stmt opening")
 	for !p.match(token.CloseBrace) {
 		content = append(content, p.Statement())
 	}
@@ -273,28 +280,11 @@ func (p *parser) ExprStmt() ast.Statement {
 
 // Declarations
 
-func syncFunc[N ast.Node](f func()) {
-	err := recover()
-	if _, ok := err.(ParseError); err != nil && !ok {
-		panic(err)
-	}
-	f()
-}
-
 func (p *parser) Declaration() (d ast.Declaration) {
-	defer syncFunc[ast.Declaration](func() {
+	defer sync(func() {
 		d = &ast.ErrDecl{}
-		fmt.Println("skipping to decl start")
 		p.skipTo(declStart)
 	})
-	// defer func() {
-	// 	err := recover()
-	// 	if _, ok := err.(ParseError); err != nil && !ok {
-	// 		panic(err)
-	// 	}
-	// 	d = &ast.ErrDecl{}
-	// 	p.skipTo(declStart)
-	// }()
 	switch kind := p.peek().Kind; kind {
 	case token.Val, token.Var:
 		d = p.TypedDecl()
@@ -308,8 +298,7 @@ func (p *parser) Declaration() (d ast.Declaration) {
 
 func (p *parser) Parameters() (decls []*ast.ParamDecl) {
 	if p.peek().Kind == token.CloseParen {
-		// empty parameter list
-		return decls
+		return decls // empty parameter list
 	}
 	for {
 		decls = append(decls, p.ParamDecl())
@@ -342,28 +331,28 @@ func (p *parser) TypedDecl() ast.Declaration {
 		if p.match(token.Identifier) {
 			decl.Type = p.prev().Lexeme
 		} else {
-			p.err("missing type for variable declaration %v", decl.Ident)
+			p.err(decl, "missing type for variable declaration %v", decl.Ident)
 		}
 
 		if p.match(token.Assign) {
 			decl.Value = p.Expression()
 		}
 	} else {
-		p.err("missing val or var for typed decl")
+		p.err(decl, "missing val or var for typed decl")
 	}
 	return decl
 }
 
 func (p *parser) FuncDecl() ast.Declaration {
 	fd := &ast.FuncDecl{}
-	p.consume(token.Func, "function declaration expects \"func\"")
+	p.consume(token.Func, nil, "function declaration start")
 	if p.match(token.Identifier) {
 		fd.Name = p.prev()
 	}
 	if p.match(token.OpenParen) {
 		fd.Params = p.Parameters()
 	}
-	p.consume(token.CloseParen, "parameters end with \")\"")
+	p.consume(token.CloseParen, fd, "end of function signature parameters")
 	fd.Body = p.BlockStmt()
 	return fd
 }

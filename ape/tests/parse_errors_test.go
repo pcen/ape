@@ -37,6 +37,7 @@ func TestBadGroupExpr(t *testing.T) {
 	`
 	node, errors := parse(source)
 	ast.PrintSlice(node)
+	fmt.Println(errors)
 	for _, err := range errors {
 		fmt.Println(err)
 	}
