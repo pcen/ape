@@ -1,0 +1,15 @@
+.vscode
+.DS_Store
+
+# project
+build/
+bin/
+install/
+
+# c++
+*.o
+*.out
+
+# python
+__pycache__/
+*.py[cod]
