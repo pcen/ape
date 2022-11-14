@@ -10,7 +10,7 @@ import (
 
 func parse(source string) ([]ast.Node, []ape.ParseError) {
 	tokens := ape.NewLexer().LexString(source)
-	fmt.Println(tokens)
+	// fmt.Println(tokens)
 	parser := ape.NewParser(tokens)
 	node := parser.Program()
 	errors, _ := parser.Errors()
@@ -35,9 +35,8 @@ func TestBadGroupExpr(t *testing.T) {
 	val a int = 1 + (2 * 3
 	var b int = 1 +
 	`
-	node, errors := parse(source)
-	ast.PrintSlice(node)
-	fmt.Println(errors)
+	_, errors := parse(source)
+	fmt.Println("errors:")
 	for _, err := range errors {
 		fmt.Println(err)
 	}

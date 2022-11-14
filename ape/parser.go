@@ -94,7 +94,7 @@ func (p *parser) Errors() ([]ParseError, bool) {
 
 func (p *parser) errExpected(kind token.Kind, parsed ast.Node, context string) {
 	pos, got := p.prev().Position, p.prev().String()
-	err := NewParseError(pos, parsed, fmt.Sprintf("%v: expected %v, got %v parsing %v", pos, kind, got, context))
+	err := NewParseError(pos, parsed, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
 	p.errors = append(p.errors, err)
 	panic(err)
 }

@@ -10,6 +10,26 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
+// Since source code files should be pretty small, LexFile should
+// probably load the entire file into a byte slice instead of using
+// bufio since this will be faster, lexemes can be obtained directly
+// from the buffer (no need for small byte slices), and less
+// backtracking with UnreadByte.
+
+var (
+	stmtEndTokens = map[token.Kind]bool{
+		token.Identifier: true,
+		token.Number:     true,
+		token.String:     true,
+		token.True:       true,
+		token.False:      true,
+		token.Break:      true,
+		token.Decrement:  true,
+		token.Increment:  true,
+		token.Return:     true,
+	}
+)
+
 func isalpha(b byte) bool {
 	return unicode.IsLetter(rune(b))
 }
@@ -44,6 +64,7 @@ type lexer struct {
 	pos     token.Position
 	prevPos token.Position
 	done    bool
+	tokens  []token.Token
 }
 
 func (l *lexer) NewToken(kind token.Kind) token.Token {
@@ -69,15 +90,16 @@ func (l *lexer) LexString(source string) []token.Token {
 	return l.lex()
 }
 
-func (l *lexer) lex() (tokens []token.Token) {
+func (l *lexer) lex() []token.Token {
+	l.tokens = make([]token.Token, 0, 64)
 	for {
 		tok := l.step()
-		tokens = append(tokens, tok)
+		l.tokens = append(l.tokens, tok)
 		if tok.Kind == token.Eof {
 			break
 		}
 	}
-	return tokens
+	return l.tokens
 }
 
 func (l *lexer) next() (byte, bool) {
@@ -152,6 +174,10 @@ func (l *lexer) skipWhiteSpace() bool {
 		if !iswspace(b) {
 			l.back()
 			return false
+		}
+		// insert statement separator automatically
+		if b == '\n' && len(l.tokens) > 0 && stmtEndTokens[l.tokens[len(l.tokens)-1].Kind] {
+			l.tokens = append(l.tokens, l.NewToken(token.Sep))
 		}
 	}
 }
@@ -316,9 +342,6 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.CloseBrack)
 
 	case ';':
-		// TODO: if ; is optional to separate statements
-		//       this token needs to be inserted at certain
-		//       places in the token stream for parsing to work
 		return l.NewToken(token.Sep)
 
 	}
