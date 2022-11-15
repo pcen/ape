@@ -27,6 +27,7 @@ var (
 		token.Decrement:  true,
 		token.Increment:  true,
 		token.Return:     true,
+		token.CloseParen: true,
 	}
 )
 

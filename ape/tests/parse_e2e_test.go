@@ -22,10 +22,20 @@ func TestParsing(t *testing.T) {
 	func main(a int) {
 		var b int = 10
 		var c int = 20
-		return b * c
+		if a > b {
+			b += 20
+		} else {
+			b **= 2
+		}
+		var d int = foobar()
+		return a + b * c - d
 	}
 	`
 	prog, errs := parse(source)
+	fmt.Println("ast:")
 	ast.PrintSlice(prog)
-	fmt.Println(errs)
+	if len(errs) > 0 {
+		fmt.Println(errs)
+		t.Fail()
+	}
 }

@@ -7,30 +7,38 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
-// program     -> decl*
+// program      -> decl*
 
-// decl        -> typedDecl | funcDecl
+// decl         -> typedDecl | funcDecl
 
-// typedDecl   -> (VAL | VAR) IDENT type  "=" expression
-// funcDecl    -> "func" IDENT "(" parameters? ")" blockStmt
+// typedDecl    -> (VAL | VAR) IDENT type  "=" expression
+// funcDecl     -> "func" IDENT "(" parameters? ")" blockStmt
 
-// parameters  -> (paramDecl ",")*
-// paramDecl   -> IDENT type
+// parameters   -> (paramDecl ",")*
+// paramDecl    -> IDENT type
 
-// blockStmt   -> "{" stmtList "}"
-// stmtList    -> (stmt;) *
+// blockStmt    -> "{" stmtList "}"
+// stmtList     -> (stmt;) *
 
-// expression  -> equality ;
-// equality    -> comparison ( ( "!=" | "==" ) comparison )*
-// comparison  -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
-// term        -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
-// factor      -> unary ( ( "/" | "*" | "&" ) unary )*
-// unary       -> ( "!" | "-" | "~" ) unary | call
-// call        -> primary ( "(" arguments? ")" )*
-// primary     -> NUMBER | STRING | IDENT | "true" | "false" | group
-// group       -> "(" expression ")"
+// stmt         -> simpleStmt | compoundStmt
+// simpleStmt   -> incStmt | assignment
+// incStmt      -> expression [++ | --]
+// assignment   -> expression assign_op expression
+// assign_op    -> = | += | *= | -= | /= | **=
 
-// arguments   -> expression ( "," expression ) *
+// compoundStmt ->
+
+// expression   -> equality ;
+// equality     -> comparison ( ( "!=" | "==" ) comparison )*
+// comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
+// term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
+// factor       -> unary ( ( "/" | "*" | "&" ) unary )*
+// unary        -> ( "!" | "-" | "~" ) unary | call
+// call         -> primary ( "(" arguments? ")" )*
+// primary      -> NUMBER | STRING | IDENT | "true" | "false" | group
+// group        -> "(" expression ")"
+
+// arguments    -> expression ( "," expression ) *
 
 // propagates panic errors that are not ParseError
 func sync(f func()) {
@@ -52,6 +60,8 @@ var (
 	}
 
 	stmtStart = map[token.Kind]bool{
+		token.Val:       true,
+		token.Var:       true,
 		token.Return:    true,
 		token.OpenBrace: true,
 	}
@@ -99,12 +109,14 @@ func (p *parser) Errors() ([]ParseError, bool) {
 func (p *parser) errExpected(kind token.Kind, parsed ast.Node, context string) {
 	pos, got := p.prev().Position, p.prev().String()
 	err := NewParseError(pos, parsed, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
+	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
 }
 
 func (p *parser) err(parsed ast.Node, format string, args ...interface{}) {
 	err := NewParseError(p.prev().Position, parsed, fmt.Sprintf(format, args...))
+	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
 }
@@ -248,11 +260,11 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 
 // Statements
 
-func (p *parser) separator() {
+func (p *parser) separator(context string) {
 	if p.match(token.Sep) || p.peek().Kind == token.CloseBrace {
 		return
 	}
-	p.errExpected(token.Sep, nil, "expected statement separator")
+	p.errExpected(token.Sep, nil, fmt.Sprint(context, ": expected statement separator"))
 }
 
 func (p *parser) Statement() (s ast.Statement) {
@@ -263,22 +275,52 @@ func (p *parser) Statement() (s ast.Statement) {
 
 	kind := p.peek().Kind
 	switch kind {
+
+	case token.Identifier:
+		s = p.SimpleStmt()
+		p.separator("simple stmt")
+
 	case token.Val, token.Var:
 		s = &ast.TypedDeclStmt{Decl: p.TypedDecl()}
-		p.separator()
+		p.separator("typed decl stmt")
+
 	case token.Return:
 		s = p.ReturnStmt()
-		p.separator()
+		p.separator("return stmt")
+
 	case token.OpenBrace:
 		s = p.BlockStmt()
+
+	case token.If:
+		s = p.IfStmt()
+
 	case token.Eof:
 		panic("stmt at eof")
+
 	default:
 		s = p.ExprStmt()
-		p.separator()
 	}
 
 	return s
+}
+
+func (p *parser) SimpleStmt() ast.Statement {
+	lhs := p.Expression()
+	if p.match(token.Increment, token.Decrement) {
+		return &ast.IncStmt{
+			Expr: lhs,
+			Op:   p.prev(),
+		}
+	}
+	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq) {
+		return &ast.AssignmentStmt{
+			Lhs: lhs,
+			Op:  p.prev(),
+			Rhs: p.Expression(),
+		}
+	}
+	p.err(lhs, "invalid token for simple stmt: %v", p.peek())
+	return nil // unreachable
 }
 
 func (p *parser) ReturnStmt() *ast.ReturnStmt {
@@ -293,6 +335,30 @@ func (p *parser) BlockStmt() *ast.BlockStmt {
 	return &ast.BlockStmt{Content: content}
 }
 
+func (p *parser) IfStmt() *ast.IfStmt {
+	stmt := &ast.IfStmt{}
+	p.consume(token.If, nil, "if stmt start")
+	stmt.Cond = p.IfCondition()
+	stmt.Body = p.BlockStmt()
+	if p.match(token.Else) {
+		stmt.Else = p.BlockStmt()
+	}
+	return stmt
+}
+
+func (p *parser) IfCondition() ast.Expression {
+	if p.peek().Kind == token.OpenBrace {
+		p.err(nil, "if condition missing condition")
+	}
+	return p.Expression()
+}
+
+// TODO: when the last statement in a statement list is invalid,
+//
+//	Statement() skips the closing curly brace in attempt to
+//	find the next statement in the list, so the parser will
+//	consume the statements in the outer block. Figure out if
+//	handling this edge case is worth the complexity.
 func (p *parser) StmtList() (stmts []ast.Statement) {
 	for p.peek().Kind != token.CloseBrace {
 		stmts = append(stmts, p.Statement())
