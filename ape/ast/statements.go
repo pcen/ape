@@ -44,3 +44,11 @@ type ReturnStmt struct {
 func (s *ReturnStmt) StmtStr() string {
 	return fmt.Sprintf("(return %v)", s.Expr.ExprStr())
 }
+
+type TypedDeclStmt struct {
+	Decl *TypedDecl
+}
+
+func (s *TypedDeclStmt) StmtStr() string {
+	return s.Decl.DeclStr()
+}

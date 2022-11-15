@@ -17,7 +17,8 @@ import (
 // parameters  -> (paramDecl ",")*
 // paramDecl   -> IDENT type
 
-// blockStmt   -> "{" statement* "}"
+// blockStmt   -> "{" stmtList "}"
+// stmtList    -> (stmt;) *
 
 // expression  -> equality ;
 // equality    -> comparison ( ( "!=" | "==" ) comparison )*
@@ -34,7 +35,10 @@ import (
 // propagates panic errors that are not ParseError
 func sync(f func()) {
 	err := recover()
-	if _, ok := err.(ParseError); err != nil && !ok {
+	if err == nil {
+		return
+	}
+	if _, ok := err.(ParseError); !ok {
 		panic(err)
 	}
 	f()
@@ -244,19 +248,36 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 
 // Statements
 
+func (p *parser) separator() {
+	if p.match(token.Sep) || p.peek().Kind == token.CloseBrace {
+		return
+	}
+	p.errExpected(token.Sep, nil, "expected statement separator")
+}
+
 func (p *parser) Statement() (s ast.Statement) {
 	defer sync(func() {
 		s = &ast.ErrStmt{}
 		p.skipTo(stmtStart)
 	})
-	switch p.peek().Kind {
+
+	kind := p.peek().Kind
+	switch kind {
+	case token.Val, token.Var:
+		s = &ast.TypedDeclStmt{Decl: p.TypedDecl()}
+		p.separator()
 	case token.Return:
 		s = p.ReturnStmt()
+		p.separator()
 	case token.OpenBrace:
 		s = p.BlockStmt()
+	case token.Eof:
+		panic("stmt at eof")
 	default:
 		s = p.ExprStmt()
+		p.separator()
 	}
+
 	return s
 }
 
@@ -266,12 +287,17 @@ func (p *parser) ReturnStmt() *ast.ReturnStmt {
 }
 
 func (p *parser) BlockStmt() *ast.BlockStmt {
-	content := make([]ast.Statement, 0)
-	p.consume(token.OpenBrace, nil, "block stmt opening")
-	for !p.match(token.CloseBrace) {
-		content = append(content, p.Statement())
-	}
+	p.consume(token.OpenBrace, nil, "block stmt start")
+	content := p.StmtList()
+	p.consume(token.CloseBrace, content, "block stmt end")
 	return &ast.BlockStmt{Content: content}
+}
+
+func (p *parser) StmtList() (stmts []ast.Statement) {
+	for p.peek().Kind != token.CloseBrace {
+		stmts = append(stmts, p.Statement())
+	}
+	return stmts
 }
 
 func (p *parser) ExprStmt() ast.Statement {
@@ -319,7 +345,7 @@ func (p *parser) ParamDecl() *ast.ParamDecl {
 	return decl
 }
 
-func (p *parser) TypedDecl() ast.Declaration {
+func (p *parser) TypedDecl() *ast.TypedDecl {
 	decl := &ast.TypedDecl{}
 	if p.match(token.Val, token.Var) {
 		decl.Kind = p.prev().Kind
