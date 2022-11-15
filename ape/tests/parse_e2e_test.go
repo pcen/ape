@@ -33,7 +33,8 @@ func TestParsing(t *testing.T) {
 	`
 	prog, errs := parse(source)
 	fmt.Println("ast:")
-	ast.PrintSlice(prog)
+	ast.PrettyPrint(prog)
+
 	if len(errs) > 0 {
 		fmt.Println(errs)
 		t.Fail()

@@ -19,7 +19,7 @@ func main() {
 	parser := ape.NewParser(tokens)
 	prog := parser.Program()
 	fmt.Println("ast:")
-	ast.PrintSlice(prog)
+	ast.PrettyPrint(prog)
 
 	if errors, ok := parser.Errors(); ok {
 		for _, err := range errors {
