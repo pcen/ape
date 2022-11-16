@@ -2,7 +2,6 @@ package ape
 
 import (
 	"bufio"
-	"io"
 	"os"
 	"strings"
 	"unicode"
@@ -61,6 +60,8 @@ func NewLexer() Lexer {
 
 type lexer struct {
 	r       *bufio.Reader
+	buf     []byte
+	idx     int
 	prev    byte
 	pos     token.Position
 	prevPos token.Position
@@ -77,13 +78,12 @@ func (l *lexer) NewLexemeToken(kind token.Kind, lexeme string) token.Token {
 }
 
 func (l *lexer) LexFile(file string) []token.Token {
-	f, err := os.Open(file)
+	var err error
+	l.buf, err = os.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}
-	l.r = bufio.NewReader(f)
 	return l.lex()
-
 }
 
 func (l *lexer) LexString(source string) []token.Token {
@@ -107,14 +107,13 @@ func (l *lexer) next() (byte, bool) {
 	if l.done {
 		return 0, false
 	}
-
-	b, err := l.r.ReadByte()
-	if err == io.EOF {
+	if l.idx == len(l.buf) {
 		l.done = true
 		return 0, false
-	} else if err != nil {
-		panic(err)
 	}
+
+	b := l.buf[l.idx]
+	l.idx++
 
 	if b == '\n' {
 		l.prevPos = l.pos
@@ -131,12 +130,7 @@ func (l *lexer) back() {
 	if l.done {
 		return
 	}
-
-	// TODO: this fails if back is ever called successively
-	//       make sure this cannot occur
-	if err := l.r.UnreadByte(); err != nil {
-		panic(err)
-	}
+	l.idx--
 	if l.prev == '\n' {
 		l.pos = l.prevPos
 	} else {
@@ -145,10 +139,10 @@ func (l *lexer) back() {
 }
 
 func (l *lexer) peek() byte {
-	if b, err := l.r.Peek(1); err == nil {
-		return b[0]
+	if l.done {
+		return 0
 	}
-	return 0
+	return l.buf[l.idx]
 }
 
 func (l *lexer) match(b byte) bool {
