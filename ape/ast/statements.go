@@ -57,17 +57,34 @@ func (s *TypedDeclStmt) StmtStr() string {
 
 // Compound Statements
 
-type IfStmt struct {
+type CondBlockStmt struct {
 	Cond Expression
-	Body Statement
-	Else Statement
+	Body *BlockStmt
+}
+
+type IfStmt struct {
+	If    *CondBlockStmt
+	Elifs []*CondBlockStmt
+	Else  *BlockStmt
 }
 
 func (s *IfStmt) StmtStr() string {
-	if s.Else != nil {
-		return fmt.Sprintf("if %v then %v else %v", s.Cond.ExprStr(), s.Body.StmtStr(), s.Else.StmtStr())
+	return fmt.Sprintf("(if %v)", s.If.Cond.ExprStr())
+}
+
+// ForStmt represents both for and while loops
+type ForStmt struct {
+	Init Declaration
+	Cond Expression
+	Incr Statement
+	Body *BlockStmt
+}
+
+func (s *ForStmt) StmtStr() string {
+	if s.Init == nil {
+		return fmt.Sprintf("(while %v)", s.Cond.ExprStr())
 	}
-	return fmt.Sprintf("if %v then %v", s.Cond.ExprStr(), s.Body.StmtStr())
+	return fmt.Sprintf("(for %v)", s.Cond.ExprStr())
 }
 
 // Simple Statements

@@ -38,8 +38,15 @@ type FuncDecl struct {
 }
 
 func (d *FuncDecl) DeclStr() string {
-	// TODO: nil unsafe
-	return fmt.Sprintf("func %v\n%v", d.Name.Lexeme, d.Body.StmtStr())
+	return fmt.Sprintf("(decl func %v)", d.Name.Lexeme)
+}
+
+type ClassDecl struct {
+	Name token.Token
+}
+
+func (d *ClassDecl) DeclStr() string {
+	return fmt.Sprintf("(decl class %v)", d.Name.Lexeme)
 }
 
 type ErrDecl struct {
