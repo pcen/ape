@@ -8,16 +8,9 @@ import (
 	"github.com/pcen/ape/ape/ast"
 )
 
-func parse(source string) ([]ast.Node, []ape.ParseError) {
-	tokens := ape.NewLexer().LexString(source)
-	parser := ape.NewParser(tokens)
-	node := parser.Program()
-	errors, _ := parser.Errors()
-	return node, errors
-}
-
-func TestParsing(t *testing.T) {
-	source := `
+var (
+	prog1 = `
+	module test
 	class foobar {
 
 	}
@@ -46,13 +39,22 @@ func TestParsing(t *testing.T) {
 		for var i int = 1; i < 20; i++ {
 			a *= i
 		}
-	}
-	`
+	}`
+)
 
-	prog, errs := parse(source)
+func parse(source string) (*ast.File, []ape.ParseError) {
+	tokens := ape.NewLexer().LexString(source)
+	parser := ape.NewParser(tokens)
+	node := parser.File()
+	errors, _ := parser.Errors()
+	return node, errors
+}
+
+func TestParsing(t *testing.T) {
+	prog, errs := parse(prog1)
+	fmt.Println("module:", prog.Module)
 	fmt.Println("ast:")
-	ast.PrettyPrint(prog)
-
+	ast.PrettyPrint(prog.Ast)
 	if len(errs) > 0 {
 		fmt.Println("\nerrors:")
 		for _, err := range errs {
