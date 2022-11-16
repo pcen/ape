@@ -1,19 +1,16 @@
 package ape
 
 import (
-	"bufio"
+	"fmt"
 	"os"
-	"strings"
 	"unicode"
 
 	"github.com/pcen/ape/ape/token"
 )
 
-// Since source code files should be pretty small, LexFile should
-// probably load the entire file into a byte slice instead of using
-// bufio since this will be faster, lexemes can be obtained directly
-// from the buffer (no need for small byte slices), and less
-// backtracking with UnreadByte.
+const (
+	byteToTokenFactor = 2
+)
 
 var (
 	stmtEndTokens = map[token.Kind]bool{
@@ -59,13 +56,11 @@ func NewLexer() Lexer {
 }
 
 type lexer struct {
-	r       *bufio.Reader
 	buf     []byte
 	idx     int
-	prev    byte
+	done    bool
 	pos     token.Position
 	prevPos token.Position
-	done    bool
 	tokens  []token.Token
 }
 
@@ -87,12 +82,13 @@ func (l *lexer) LexFile(file string) []token.Token {
 }
 
 func (l *lexer) LexString(source string) []token.Token {
-	l.r = bufio.NewReader(strings.NewReader(source))
+	l.buf = []byte(source)
 	return l.lex()
 }
 
 func (l *lexer) lex() []token.Token {
-	l.tokens = make([]token.Token, 0, 64)
+	l.tokens = make([]token.Token, 0, len(l.buf)/byteToTokenFactor)
+	l.idx = 0
 	for {
 		tok := l.step()
 		l.tokens = append(l.tokens, tok)
@@ -104,11 +100,8 @@ func (l *lexer) lex() []token.Token {
 }
 
 func (l *lexer) next() (byte, bool) {
+	l.done = l.idx == len(l.buf)
 	if l.done {
-		return 0, false
-	}
-	if l.idx == len(l.buf) {
-		l.done = true
 		return 0, false
 	}
 
@@ -122,7 +115,6 @@ func (l *lexer) next() (byte, bool) {
 	} else {
 		l.pos.Column++
 	}
-	l.prev = b
 	return b, true
 }
 
@@ -131,7 +123,7 @@ func (l *lexer) back() {
 		return
 	}
 	l.idx--
-	if l.prev == '\n' {
+	if l.buf[l.idx] == '\n' {
 		l.pos = l.prevPos
 	} else {
 		l.pos.Column--
@@ -139,7 +131,7 @@ func (l *lexer) back() {
 }
 
 func (l *lexer) peek() byte {
-	if l.done {
+	if l.idx == len(l.buf) {
 		return 0
 	}
 	return l.buf[l.idx]
@@ -153,9 +145,9 @@ func (l *lexer) match(b byte) bool {
 	return isMatch
 }
 
-func (l *lexer) pick(b byte, onMatch token.Kind, noMatch token.Kind) token.Token {
+func (l *lexer) pick(b byte, match token.Kind, noMatch token.Kind) token.Token {
 	if l.match(b) {
-		return l.NewToken(onMatch)
+		return l.NewToken(match)
 	}
 	return l.NewToken(noMatch)
 }
@@ -167,6 +159,7 @@ func (l *lexer) skipWhiteSpace() bool {
 			return true
 		}
 		if !iswspace(b) {
+			fmt.Printf("!ws: %c\n", b)
 			l.back()
 			return false
 		}
@@ -178,16 +171,16 @@ func (l *lexer) skipWhiteSpace() bool {
 }
 
 func (l *lexer) identifier() token.Token {
-	buf := make([]byte, 0, 16)
+	start, end := l.idx, 0
 	for {
 		b, _ := l.next()
 		if !isalpha(b) && !isdigit(b) && b != '_' {
 			l.back()
+			end = l.idx
 			break
 		}
-		buf = append(buf, b)
 	}
-	lexeme := string(buf)
+	lexeme := string(l.buf[start:end])
 	if kind, keyword := token.GetKeyword(lexeme); keyword {
 		return l.NewToken(kind)
 	}
@@ -195,47 +188,48 @@ func (l *lexer) identifier() token.Token {
 }
 
 func (l *lexer) number() token.Token {
-	buf := make([]byte, 0, 16)
+	start, end := l.idx, 0
 	dot := false
 	for {
 		b, _ := l.next()
 		if !isdigit(b) || (b == '.' && dot) {
 			l.back()
+			end = l.idx
 			break
 		}
 		if b == '.' {
 			dot = true
 		}
-		buf = append(buf, b)
 	}
-	return l.NewLexemeToken(token.Number, string(buf))
+	return l.NewLexemeToken(token.Number, string(l.buf[start:end]))
 }
 
 func (l *lexer) comment() token.Token {
-	buf := make([]byte, 0, 16)
+	start, end := l.idx, 0
 	for {
 		b, _ := l.next()
 		if b == '\r' {
 			l.next()
+			end = l.idx - 2
 			break
 		} else if b == '\n' {
+			end = l.idx - 1
 			break
 		}
-		buf = append(buf, b)
 	}
-	return l.NewLexemeToken(token.Comment, string(buf))
+	return l.NewLexemeToken(token.Comment, string(l.buf[start:end]))
 }
 
 func (l *lexer) str() token.Token {
-	buf := make([]byte, 0, 16)
+	start, end := l.idx, 0
 	for {
 		b, _ := l.next()
 		if b == '"' {
+			end = l.idx - 1
 			break
 		}
-		buf = append(buf, b)
 	}
-	return l.NewLexemeToken(token.String, string(buf))
+	return l.NewLexemeToken(token.String, string(l.buf[start:end]))
 }
 
 func (l *lexer) step() token.Token {
@@ -244,6 +238,7 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Eof)
 	}
 	b, _ := l.next()
+	fmt.Printf("b is: %c\n", b)
 	if isalpha(b) || b == '_' {
 		// variable or keyword
 		l.back()
@@ -340,6 +335,10 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Sep)
 
 	}
+	if b == 0 {
+		fmt.Println("GOT 0")
+	}
+	fmt.Printf("unknown byte: %c\n", b)
 
 	return l.NewToken(token.Invalid)
 }

@@ -44,6 +44,7 @@ var (
 
 func parse(source string) (*ast.File, []ape.ParseError) {
 	tokens := ape.NewLexer().LexString(source)
+	fmt.Println(tokens)
 	parser := ape.NewParser(tokens)
 	node := parser.File()
 	errors, _ := parser.Errors()
