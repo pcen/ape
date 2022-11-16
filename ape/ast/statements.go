@@ -95,7 +95,7 @@ type IncStmt struct {
 }
 
 func (s *IncStmt) StmtStr() string {
-	return fmt.Sprintf("(%v %v)", s.Expr.ExprStr(), s.Op)
+	return fmt.Sprintf("(%v %v)", s.Op, s.Expr.ExprStr())
 }
 
 type AssignmentStmt struct {

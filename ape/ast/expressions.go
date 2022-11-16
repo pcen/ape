@@ -46,7 +46,7 @@ func (e *IdentExpr) ExprStr() string {
 	return fmt.Sprintf("%v", e.Token)
 }
 
-func NewIdentExpr(token token.Token) Expression {
+func NewIdentExpr(token token.Token) *IdentExpr {
 	return &IdentExpr{Token: token}
 }
 
@@ -84,4 +84,22 @@ type CallExpr struct {
 
 func (e *CallExpr) ExprStr() string {
 	return fmt.Sprintf("(%v() %v)", e.Callee.ExprStr(), e.Args)
+}
+
+type DotExpr struct {
+	Expr  Expression
+	Field *IdentExpr
+}
+
+func (e *DotExpr) ExprStr() string {
+	return fmt.Sprintf("(%v.%v)", e.Expr.ExprStr(), e.Field.Lexeme)
+}
+
+type IndexExpr struct {
+	Expr  Expression
+	Index Expression
+}
+
+func (e *IndexExpr) ExprStr() string {
+	return fmt.Sprintf("(%v[%v])", e.Expr.ExprStr(), e.Index.ExprStr())
 }

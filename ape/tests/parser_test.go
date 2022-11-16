@@ -25,7 +25,8 @@ func TestParsing(t *testing.T) {
 	func main(a int) {
 		var b int = 10
 		var c int = 20
-		a *= 2
+		a.b().c.d()() *= 2
+		a[foo.bar]++
 		if a > b {
 			b += 20
 		} elif a == b {
