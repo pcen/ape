@@ -13,6 +13,8 @@ import (
 
 // typedDecl    -> (VAL | VAR) IDENT type  "=" expression
 // funcDecl     -> "func" IDENT "(" parameters? ")" blockStmt
+// classDecl    -> "class" IDENT "{" classBody "}"
+// classBody    ->
 
 // parameters   -> (paramDecl ",")*
 // paramDecl    -> IDENT type
@@ -26,7 +28,7 @@ import (
 // assignment   -> expression assign_op expression
 // assign_op    -> = | += | *= | -= | /= | **=
 
-// compoundStmt ->
+// compoundStmt -> ifStmt | forStmt
 
 // expression   -> equality ;
 // equality     -> comparison ( ( "!=" | "==" ) comparison )*
@@ -64,24 +66,21 @@ var (
 		token.Var:       true,
 		token.Return:    true,
 		token.OpenBrace: true,
+		token.If:        true,
 	}
 )
 
 type ParseError struct {
-	Pos    token.Position
-	What   string
-	Parsed ast.Node
+	Pos  token.Position
+	What string
 }
 
-func NewParseError(pos token.Position, parsed ast.Node, format string, a ...interface{}) ParseError {
-	return ParseError{Pos: pos, Parsed: parsed, What: fmt.Sprintf(format, a...)}
+func NewParseError(pos token.Position, format string, a ...interface{}) ParseError {
+	return ParseError{Pos: pos, What: fmt.Sprintf(format, a...)}
 }
 
 func (p ParseError) String() string {
-	if p.Parsed == nil {
-		return fmt.Sprintf("%v: %v", p.Pos, p.What)
-	}
-	return fmt.Sprintf("%v: %v, ast: %v", p.Pos, p.What, ast.NodeString(p.Parsed))
+	return fmt.Sprint(p.Pos, ": ", p.What)
 }
 
 type Parser interface {
@@ -106,16 +105,16 @@ func (p *parser) Errors() ([]ParseError, bool) {
 	return p.errors, len(p.errors) > 0
 }
 
-func (p *parser) errExpected(kind token.Kind, parsed ast.Node, context string) {
+func (p *parser) errExpected(kind token.Kind, context string) {
 	pos, got := p.prev().Position, p.prev().String()
-	err := NewParseError(pos, parsed, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
+	err := NewParseError(pos, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
 	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
 }
 
-func (p *parser) err(parsed ast.Node, format string, args ...interface{}) {
-	err := NewParseError(p.prev().Position, parsed, fmt.Sprintf(format, args...))
+func (p *parser) err(format string, args ...interface{}) {
+	err := NewParseError(p.prev().Position, fmt.Sprintf(format, args...))
 	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
@@ -143,12 +142,10 @@ func (p *parser) next() token.Token {
 	return p.tokens[p.pos-1]
 }
 
-func (p *parser) consume(tk token.Kind, parsed ast.Node, context string) {
-	if p.tokens[p.pos].Kind == tk {
-		p.pos++
-		return
+func (p *parser) consume(tk token.Kind, context string) {
+	if !p.match(tk) {
+		p.errExpected(tk, context)
 	}
-	p.errExpected(tk, parsed, context)
 }
 
 func (p *parser) prev() token.Token {
@@ -157,7 +154,7 @@ func (p *parser) prev() token.Token {
 
 func (p *parser) match(tk ...token.Kind) bool {
 	for _, t := range tk {
-		if p.tokens[p.pos].Kind == t {
+		if p.peek().Kind == t {
 			p.pos++
 			return true
 		}
@@ -215,7 +212,7 @@ func (p *parser) CallExpr() ast.Expression {
 	primary := p.Primary()
 	if p.match(token.OpenParen) {
 		args := p.Arguments()
-		p.consume(token.CloseParen, primary, "end of call expr")
+		p.consume(token.CloseParen, "end of call expr")
 		return &ast.CallExpr{
 			Callee: primary,
 			Args:   args,
@@ -246,15 +243,15 @@ func (p *parser) Primary() ast.Expression {
 	case token.OpenParen:
 		return p.GroupExpr()
 	default:
-		p.err(nil, "invalid token for expression: %v", p.peek())
+		p.err("invalid token for expression: %v", p.peek())
 		return nil // err unwinds stack
 	}
 }
 
 func (p *parser) GroupExpr() (expr ast.Expression) {
-	p.consume(token.OpenParen, nil, "start of group expr")
+	p.consume(token.OpenParen, "start of group expr")
 	expr = p.Expression()
-	p.consume(token.CloseParen, expr, "end of group expr")
+	p.consume(token.CloseParen, "end of group expr")
 	return &ast.GroupExpr{Expr: expr}
 }
 
@@ -264,7 +261,7 @@ func (p *parser) separator(context string) {
 	if p.match(token.Sep) || p.peek().Kind == token.CloseBrace {
 		return
 	}
-	p.errExpected(token.Sep, nil, fmt.Sprint(context, ": expected statement separator"))
+	p.errExpected(token.Sep, fmt.Sprint(context, ": expected statement separator"))
 }
 
 func (p *parser) Statement() (s ast.Statement) {
@@ -294,6 +291,9 @@ func (p *parser) Statement() (s ast.Statement) {
 	case token.If:
 		s = p.IfStmt()
 
+	case token.For, token.While:
+		s = p.ForStmt()
+
 	case token.Eof:
 		panic("stmt at eof")
 
@@ -319,38 +319,66 @@ func (p *parser) SimpleStmt() ast.Statement {
 			Rhs: p.Expression(),
 		}
 	}
-	p.err(lhs, "invalid token for simple stmt: %v", p.peek())
+	p.err("invalid token for simple stmt: %v", p.peek())
 	return nil // unreachable
 }
 
 func (p *parser) ReturnStmt() *ast.ReturnStmt {
-	p.consume(token.Return, nil, "return stmt")
+	p.consume(token.Return, "return stmt")
 	return &ast.ReturnStmt{Expr: p.Expression()}
 }
 
 func (p *parser) BlockStmt() *ast.BlockStmt {
-	p.consume(token.OpenBrace, nil, "block stmt start")
+	p.consume(token.OpenBrace, "block stmt start")
 	content := p.StmtList()
-	p.consume(token.CloseBrace, content, "block stmt end")
+	p.consume(token.CloseBrace, "block stmt end")
 	return &ast.BlockStmt{Content: content}
 }
 
 func (p *parser) IfStmt() *ast.IfStmt {
-	stmt := &ast.IfStmt{}
-	p.consume(token.If, nil, "if stmt start")
-	stmt.Cond = p.IfCondition()
-	stmt.Body = p.BlockStmt()
+	stmt := &ast.IfStmt{
+		Elifs: make([]*ast.CondBlockStmt, 0),
+	}
+	p.consume(token.If, "if stmt start")
+	stmt.If = p.CondBlockStmt()
+	for p.match(token.Elif) {
+		stmt.Elifs = append(stmt.Elifs, p.CondBlockStmt())
+	}
 	if p.match(token.Else) {
 		stmt.Else = p.BlockStmt()
 	}
 	return stmt
 }
 
-func (p *parser) IfCondition() ast.Expression {
+func (p *parser) CondBlockStmt() *ast.CondBlockStmt {
 	if p.peek().Kind == token.OpenBrace {
-		p.err(nil, "if condition missing condition")
+		p.err("missing predicate expression for conditional block")
 	}
-	return p.Expression()
+	return &ast.CondBlockStmt{
+		Cond: p.Equality(),
+		Body: p.BlockStmt(),
+	}
+}
+
+func (p *parser) ForStmt() *ast.ForStmt {
+	s := &ast.ForStmt{}
+	switch p.next().Kind {
+
+	case token.For:
+		s.Init = p.TypedDecl()
+		p.separator("after for loop init")
+		s.Cond = p.Expression()
+		p.separator("after for loop condition")
+		s.Incr = p.SimpleStmt()
+
+	case token.While:
+		s.Cond = p.Expression()
+
+	default:
+		p.err("%v cannot start a loop statement", p.prev())
+	}
+	s.Body = p.BlockStmt()
+	return s
 }
 
 // TODO: when the last statement in a statement list is invalid,
@@ -377,18 +405,25 @@ func (p *parser) Declaration() (d ast.Declaration) {
 		d = &ast.ErrDecl{}
 		p.skipTo(declStart)
 	})
+
 	switch kind := p.peek().Kind; kind {
+
 	case token.Val, token.Var:
 		d = p.TypedDecl()
+
 	case token.Func:
 		d = p.FuncDecl()
+
+	case token.Class:
+		d = p.ClassDecl()
+
 	default:
 		panic(fmt.Sprintf("%v not a declaration start", kind))
 	}
 	return d
 }
 
-func (p *parser) Parameters() (decls []*ast.ParamDecl) {
+func (p *parser) ParamList() (decls []*ast.ParamDecl) {
 	if p.peek().Kind == token.CloseParen {
 		return decls // empty parameter list
 	}
@@ -412,39 +447,46 @@ func (p *parser) ParamDecl() *ast.ParamDecl {
 }
 
 func (p *parser) TypedDecl() *ast.TypedDecl {
-	decl := &ast.TypedDecl{}
 	if p.match(token.Val, token.Var) {
+		decl := &ast.TypedDecl{}
 		decl.Kind = p.prev().Kind
 
-		if p.match(token.Identifier) {
-			decl.Ident = p.prev()
-		}
+		p.consume(token.Identifier, "typed decl identifier")
+		decl.Ident = p.prev()
 
-		if p.match(token.Identifier) {
-			decl.Type = p.prev().Lexeme
-		} else {
-			p.err(decl, "missing type for variable declaration %v", decl.Ident)
-		}
+		p.consume(token.Identifier, "typed decl type")
+		decl.Type = p.prev().Lexeme
 
 		if p.match(token.Assign) {
 			decl.Value = p.Expression()
 		}
-	} else {
-		p.err(decl, "missing val or var for typed decl")
+		return decl
 	}
-	return decl
+	p.err("missing val or var for typed decl")
+	return nil
 }
 
-func (p *parser) FuncDecl() ast.Declaration {
+func (p *parser) FuncDecl() *ast.FuncDecl {
 	fd := &ast.FuncDecl{}
-	p.consume(token.Func, nil, "function declaration start")
-	if p.match(token.Identifier) {
-		fd.Name = p.prev()
-	}
-	if p.match(token.OpenParen) {
-		fd.Params = p.Parameters()
-	}
-	p.consume(token.CloseParen, fd, "end of function signature parameters")
+	p.consume(token.Func, "function declaration start")
+
+	p.consume(token.Identifier, "function name")
+	fd.Name = p.prev()
+
+	p.consume(token.OpenParen, "function signature parameters")
+	fd.Params = p.ParamList()
+	p.consume(token.CloseParen, "end of function signature parameters")
+
 	fd.Body = p.BlockStmt()
 	return fd
+}
+
+func (p *parser) ClassDecl() *ast.ClassDecl {
+	cd := &ast.ClassDecl{}
+	p.consume(token.Class, "class declaration start")
+	p.consume(token.Identifier, "class name")
+	cd.Name = p.prev()
+	p.BlockStmt()
+
+	return cd
 }
