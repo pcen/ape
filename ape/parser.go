@@ -35,20 +35,19 @@ import (
 // comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
 // term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
 // factor       -> unary ( ( "/" | "*" | "&" ) unary )*
-// unary        -> ( "!" | "-" | "~" ) unary | call
-// call         -> primary ( "(" arguments? ")" )*
-// primary      -> NUMBER | STRING | IDENT | "true" | "false" | group
+// unary        -> ( "!" | "-" | "~" ) unary | primary
+// primary         -> atom ( ["(" arguments? ")" | "." IDENT] )*
+// atom         -> NUMBER | STRING | IDENT | "true" | "false" | group
+// selector     -> "." IDENT
 // group        -> "(" expression ")"
 
 // arguments    -> expression ( "," expression ) *
 
 // propagates panic errors that are not ParseError
 func sync(f func()) {
-	err := recover()
-	if err == nil {
+	if err := recover(); err == nil {
 		return
-	}
-	if _, ok := err.(ParseError); !ok {
+	} else if _, ok := err.(ParseError); !ok {
 		panic(err)
 	}
 	f()
@@ -67,6 +66,8 @@ var (
 		token.Return:    true,
 		token.OpenBrace: true,
 		token.If:        true,
+		token.For:       true,
+		token.While:     true,
 	}
 )
 
@@ -137,6 +138,15 @@ func (p *parser) peek() token.Token {
 	return p.tokens[p.pos]
 }
 
+func (p *parser) peekIs(kinds ...token.Kind) bool {
+	for _, kind := range kinds {
+		if p.peek().Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *parser) next() token.Token {
 	p.pos++
 	return p.tokens[p.pos-1]
@@ -204,38 +214,47 @@ func (p *parser) Unary() ast.Expression {
 	case token.Bang, token.Minus, token.BitNegate:
 		return ast.NewUnaryOp(p.next().Kind, p.Unary())
 	default:
-		return p.CallExpr()
+		return p.Primary()
 	}
 }
 
-func (p *parser) CallExpr() ast.Expression {
-	primary := p.Primary()
-	if p.match(token.OpenParen) {
-		args := p.Arguments()
-		p.consume(token.CloseParen, "end of call expr")
-		return &ast.CallExpr{
-			Callee: primary,
-			Args:   args,
+// unary and binary operators work on primary expressions
+func (p *parser) Primary() ast.Expression {
+	expr := p.Atom()
+	for p.peekIs(token.OpenParen, token.Dot, token.OpenBrack) {
+		// foo(bar)
+		if p.match(token.OpenParen) {
+			args := p.Arguments()
+			p.consume(token.CloseParen, "end of call expr")
+			expr = &ast.CallExpr{Callee: expr, Args: args}
+		}
+		// foo.bar
+		if p.match(token.Dot) {
+			p.consume(token.Identifier, "field in dot expr")
+			expr = &ast.DotExpr{Expr: expr, Field: ast.NewIdentExpr(p.prev())}
+		}
+		// foo[bar]
+		if p.match(token.OpenBrack) {
+			index := p.Expression()
+			p.consume(token.CloseBrack, "end of index expr")
+			expr = &ast.IndexExpr{Expr: expr, Index: index}
 		}
 	}
-	return primary
+	return expr
 }
 
 func (p *parser) Arguments() (args []ast.Expression) {
-	if p.peek().Kind == token.CloseParen {
-		// empty argument list
-		return args
-	}
-	for {
+	for !p.peekIs(token.CloseParen) {
 		args = append(args, p.Expression())
 		if !p.match(token.Comma) {
-			return args
+			break
 		}
 	}
+	return args
 }
 
-func (p *parser) Primary() ast.Expression {
-	switch kind := p.peek().Kind; kind {
+func (p *parser) Atom() ast.Expression {
+	switch p.peek().Kind {
 	case token.Number, token.String, token.True, token.False:
 		return ast.NewLiteralExpr(p.next())
 	case token.Identifier:
@@ -258,7 +277,7 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 // Statements
 
 func (p *parser) separator(context string) {
-	if p.match(token.Sep) || p.peek().Kind == token.CloseBrace {
+	if p.match(token.Sep) || p.peekIs(token.CloseBrace) {
 		return
 	}
 	p.errExpected(token.Sep, fmt.Sprint(context, ": expected statement separator"))
@@ -270,8 +289,7 @@ func (p *parser) Statement() (s ast.Statement) {
 		p.skipTo(stmtStart)
 	})
 
-	kind := p.peek().Kind
-	switch kind {
+	switch p.peek().Kind {
 
 	case token.Identifier:
 		s = p.SimpleStmt()
@@ -424,7 +442,7 @@ func (p *parser) Declaration() (d ast.Declaration) {
 }
 
 func (p *parser) ParamList() (decls []*ast.ParamDecl) {
-	if p.peek().Kind == token.CloseParen {
+	if p.peekIs(token.CloseParen) {
 		return decls // empty parameter list
 	}
 	for {
