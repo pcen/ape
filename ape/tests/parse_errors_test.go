@@ -36,8 +36,8 @@ func TestBadGroupExpr(t *testing.T) {
 	var b int = 1 +
 	int c = 2
 	`
-	node, errors := parseHelper(source)
-	ast.PrintSlice(node)
+	tree, errors := parseHelper(source)
+	ast.PrettyPrint(tree)
 	fmt.Println("errors:")
 	for _, err := range errors {
 		fmt.Println(err)
