@@ -1,12 +1,13 @@
 .vscode
 .DS_Store
+*.txt
 
 # project
 build/
 bin/
 install/
 
-# c++
+# c
 *.o
 *.out
 

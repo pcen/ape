@@ -7,8 +7,9 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
-// program      -> decl*
+// program      -> module decl*
 
+// module       -> "module" IDENT
 // decl         -> typedDecl | funcDecl
 
 // typedDecl    -> (VAL | VAR) IDENT type  "=" expression
@@ -72,20 +73,21 @@ var (
 )
 
 type ParseError struct {
-	Pos  token.Position
-	What string
+	Pos token.Position
+	Msg string
 }
 
 func NewParseError(pos token.Position, format string, a ...interface{}) ParseError {
-	return ParseError{Pos: pos, What: fmt.Sprintf(format, a...)}
+	return ParseError{Pos: pos, Msg: fmt.Sprintf(format, a...)}
 }
 
 func (p ParseError) String() string {
-	return fmt.Sprint(p.Pos, ": ", p.What)
+	return fmt.Sprint(p.Pos, ": ", p.Msg)
 }
 
 type Parser interface {
-	Program() []ast.Node
+	File() *ast.File
+	Program() []ast.Declaration
 	Errors() ([]ParseError, bool)
 }
 
@@ -172,11 +174,21 @@ func (p *parser) match(tk ...token.Kind) bool {
 	return false
 }
 
-func (p *parser) Program() (program []ast.Node) {
+func (p *parser) File() (file *ast.File) {
+	f := ast.NewFile("")
+	p.consume(token.Module, "module declaration")
+	p.consume(token.Identifier, "module name")
+	f.Module = p.prev().Lexeme
+	p.separator("end of module declaration")
+	f.Ast = p.Program()
+	return f
+}
+
+func (p *parser) Program() (decls []ast.Declaration) {
 	for !p.match(token.Eof) {
-		program = append(program, p.Declaration())
+		decls = append(decls, p.Declaration())
 	}
-	return program
+	return decls
 }
 
 // Expressions

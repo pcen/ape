@@ -8,7 +8,7 @@ import (
 )
 
 type Checker interface {
-	Check([]ast.Node) (map[ast.Expression]Type, map[string]Type)
+	Check([]ast.Declaration) (map[ast.Expression]Type, map[string]Type)
 }
 
 type checker struct {
@@ -23,16 +23,18 @@ func NewChecker() Checker {
 	}
 }
 
-func (c *checker) Check(nodes []ast.Node) (map[ast.Expression]Type, map[string]Type) {
-	for _, node := range nodes {
-		switch n := node.(type) {
-		case ast.Statement:
-			c.checkStatement(n)
-		case ast.Expression:
-			c.checkExpression(n)
-		}
+func (c *checker) Check(decls []ast.Declaration) (map[ast.Expression]Type, map[string]Type) {
+	for _, decl := range decls {
+		c.checkDeclaration(decl)
 	}
 	return c.types, c.symbols
+}
+
+func (c *checker) checkDeclaration(decl ast.Declaration) {
+	switch d := decl.(type) {
+	case *ast.TypedDecl:
+		fmt.Println(d)
+	}
 }
 
 func (c *checker) checkExpression(expr ast.Expression) (t Type) {

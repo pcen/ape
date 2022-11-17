@@ -1,0 +1,3 @@
+package ape
+
+func resolve() {}

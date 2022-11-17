@@ -5,23 +5,22 @@ import (
 	"strings"
 )
 
-type Node interface {
+type Node interface{}
+
+type File struct {
+	Path   string
+	Module string
+	Ast    []Declaration
 }
 
-func NodeString(n Node) string {
-	switch impl := n.(type) {
-	case Declaration:
-		return impl.DeclStr()
-	case Statement:
-		return impl.StmtStr()
-	case Expression:
-		return impl.ExprStr()
-	default:
-		return "<NODE>"
+func NewFile(path string) *File {
+	return &File{
+		Path: path,
+		Ast:  make([]Declaration, 0),
 	}
 }
 
-func PrettyPrint(tree []Node) {
+func PrettyPrint(tree []Declaration) {
 	for _, node := range tree {
 		prettyPrint(node, 0)
 	}

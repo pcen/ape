@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pcen/ape/ape"
@@ -31,6 +32,8 @@ func TestInsertStatementSeparators(t *testing.T) {
 
 	tokens := lex(source)
 	tokens2 := lex(source2)
+
+	fmt.Println(tokens)
 
 	for _, i := range sepIndices {
 		if tokens[i].Kind != token.Sep {
