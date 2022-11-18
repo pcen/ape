@@ -21,19 +21,84 @@ func NewFile(path string) *File {
 }
 
 func PrettyPrint(tree []Declaration) {
+	p := &printer{}
 	for _, node := range tree {
-		prettyPrint(node, 0)
+		p.level = -1
+		p.prettyPrint(node)
 	}
 }
 
-func pf(level int) string {
-	return strings.Repeat("\t", level)
+type printer struct {
+	level int
 }
 
-func prettyPrintStmtList(stmts []Statement, level int) {
+func (p *printer) printf(format string, a ...interface{}) {
+	pf := strings.Repeat("\t", p.level)
+	fmt.Print(pf)
+	fmt.Printf(format, a...)
+}
+
+func (p *printer) printStmtList(stmts []Statement) {
 	for _, s := range stmts {
-		prettyPrint(s, level)
+		p.prettyPrint(s)
 	}
+}
+
+func (p *printer) prettyPrint(node Node) {
+	p.level++
+	switch n := node.(type) {
+	case Declaration:
+		switch decl := n.(type) {
+		case *FuncDecl:
+			p.printf("func %v (%v) {\n", decl.Name, paramDeclsStr(decl.Params))
+			p.prettyPrint(decl.Body)
+			p.printf("}\n\n")
+
+		case *ClassDecl:
+			p.printf("class %v {\n", decl.Name)
+			p.printf("}\n\n")
+
+		default:
+			p.printf("%v\n", decl.DeclStr())
+		}
+
+	case Statement:
+		switch stmt := n.(type) {
+		case *BlockStmt:
+			p.printStmtList(stmt.Content)
+
+		case *IfStmt:
+			p.printf("if %v {\n", stmt.If.Cond.ExprStr())
+			p.prettyPrint(stmt.If.Body)
+			if len(stmt.Elifs) > 0 {
+				for _, b := range stmt.Elifs {
+					p.printf("} elif %v {\n", b.Cond.ExprStr())
+					p.prettyPrint(b.Body)
+				}
+			}
+			if stmt.Else != nil {
+				p.printf("} else {\n")
+				p.prettyPrint(stmt.Else)
+			}
+			p.printf("}\n")
+
+		case *ForStmt:
+			if stmt.Init == nil {
+				p.printf("while %v {\n", stmt.Cond.ExprStr())
+			} else {
+				p.printf("for %v; %v; %v {\n", stmt.Init.DeclStr(), stmt.Cond.ExprStr(), stmt.Incr.StmtStr())
+			}
+			p.prettyPrint(stmt.Body)
+			p.printf("}\n")
+
+		default:
+			p.printf("%v\n", stmt.StmtStr())
+		}
+
+	case Expression:
+		p.printf("%v\n", n.ExprStr())
+	}
+	p.level--
 }
 
 func paramDeclsStr(pds []*ParamDecl) string {
@@ -45,59 +110,4 @@ func paramDeclsStr(pds []*ParamDecl) string {
 		}
 	}
 	return sb.String()
-}
-
-func prettyPrint(node Node, level int) {
-	pfx := pf(level)
-
-	switch n := node.(type) {
-	case Declaration:
-		switch decl := n.(type) {
-		case *FuncDecl:
-			fmt.Printf("%vfunc %v (%v) {\n", pfx, decl.Name, paramDeclsStr(decl.Params))
-			prettyPrint(decl.Body, level+1)
-			fmt.Printf("%v}\n\n", pfx)
-		case *ClassDecl:
-			fmt.Printf("%vclass %v {\n", pfx, decl.Name)
-			fmt.Printf("%v}\n\n", pfx)
-		default:
-			fmt.Printf("%v%v\n", pfx, decl.DeclStr())
-		}
-
-	case Statement:
-		switch stmt := n.(type) {
-		case *BlockStmt:
-			prettyPrintStmtList(stmt.Content, level)
-
-		case *IfStmt:
-			fmt.Printf("%vif %v {\n", pfx, stmt.If.Cond.ExprStr())
-			prettyPrint(stmt.If.Body, level+1)
-			if len(stmt.Elifs) > 0 {
-				for _, b := range stmt.Elifs {
-					fmt.Printf("%v} elif %v {\n", pfx, b.Cond.ExprStr())
-					prettyPrint(b.Body, level+1)
-				}
-			}
-			if stmt.Else != nil {
-				fmt.Printf("%v} else {\n", pfx)
-				prettyPrint(stmt.Else, level+1)
-			}
-			fmt.Printf("%v}\n", pfx)
-
-		case *ForStmt:
-			if stmt.Init == nil {
-				fmt.Printf("%vwhile %v {\n", pfx, stmt.Cond.ExprStr())
-			} else {
-				fmt.Printf("%vfor %v; %v; %v {\n", pfx, stmt.Init.DeclStr(), stmt.Cond.ExprStr(), stmt.Incr.StmtStr())
-			}
-			prettyPrint(stmt.Body, level+1)
-			fmt.Printf("%v}\n", pfx)
-
-		default:
-			fmt.Printf("%v%v\n", pfx, stmt.StmtStr())
-		}
-
-	case Expression:
-		fmt.Printf("%v%v\n", pfx, n.ExprStr())
-	}
 }

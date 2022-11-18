@@ -15,12 +15,14 @@ var (
 
 	}
 
+	var abc int = 100
+
 	func main(a int) {
 		var b int = 10
 		var c int = 20
 		a.b().c.d()() *= 2
 		a[foo.bar]++
-		if a > b {
+		if zzzzzzz > b {
 			b += 20
 		} elif a == b {
 			b = 0

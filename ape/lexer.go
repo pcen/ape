@@ -1,7 +1,6 @@
 package ape
 
 import (
-	"fmt"
 	"os"
 	"unicode"
 
@@ -159,7 +158,6 @@ func (l *lexer) skipWhiteSpace() bool {
 			return true
 		}
 		if !iswspace(b) {
-			fmt.Printf("!ws: %c\n", b)
 			l.back()
 			return false
 		}
@@ -238,7 +236,6 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Eof)
 	}
 	b, _ := l.next()
-	fmt.Printf("b is: %c\n", b)
 	if isalpha(b) || b == '_' {
 		// variable or keyword
 		l.back()
@@ -335,10 +332,6 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Sep)
 
 	}
-	if b == 0 {
-		fmt.Println("GOT 0")
-	}
-	fmt.Printf("unknown byte: %c\n", b)
-
-	return l.NewToken(token.Invalid)
+	panic("invalid byte: " + string(b))
+	// return l.NewToken(token.Invalid)
 }

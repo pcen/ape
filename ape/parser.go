@@ -440,6 +440,7 @@ func (p *parser) Declaration() (d ast.Declaration) {
 
 	case token.Val, token.Var:
 		d = p.TypedDecl()
+		p.separator("end of val/var decl")
 
 	case token.Func:
 		d = p.FuncDecl()
