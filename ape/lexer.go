@@ -14,7 +14,8 @@ const (
 var (
 	stmtEndTokens = map[token.Kind]bool{
 		token.Identifier: true,
-		token.Number:     true,
+		token.Integer:    true,
+		token.Rational:   true,
 		token.String:     true,
 		token.True:       true,
 		token.False:      true,
@@ -187,19 +188,19 @@ func (l *lexer) identifier() token.Token {
 
 func (l *lexer) number() token.Token {
 	start, end := l.idx, 0
-	dot := false
+	kind := token.Integer
 	for {
 		b, _ := l.next()
-		if !isdigit(b) || (b == '.' && dot) {
+		if !(isdigit(b) || b == '.' && kind == token.Integer) {
 			l.back()
 			end = l.idx
 			break
 		}
 		if b == '.' {
-			dot = true
+			kind = token.Rational
 		}
 	}
-	return l.NewLexemeToken(token.Number, string(l.buf[start:end]))
+	return l.NewLexemeToken(kind, string(l.buf[start:end]))
 }
 
 func (l *lexer) comment() token.Token {

@@ -7,116 +7,102 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
-type Checker interface {
-	Check([]ast.Declaration) (map[ast.Expression]Type, map[string]Type)
+type checkerError struct {
+	pos token.Position
+	msg string
 }
 
-type checker struct {
-	types   map[ast.Expression]Type
-	symbols map[string]Type
+func (e *checkerError) String() string {
+	return fmt.Sprintf("%v: %v", e.pos, e.msg)
 }
 
-func NewChecker() Checker {
-	return &checker{
-		types:   make(map[ast.Expression]Type),
-		symbols: make(map[string]Type),
+func (c *Checker) errTypeMissmatch(pos token.Position, ident string, expected, got string) {
+	c.err(pos, "type missmatch for %v: expected %v, got %v", ident, expected, got)
+}
+
+func (c *Checker) errUndefinedIdent(expr *ast.IdentExpr) {
+	c.err(expr.Token.Position, "undefined identifier %v", expr.Token.Lexeme)
+}
+
+func (c *Checker) err(pos token.Position, format string, a ...interface{}) {
+	c.Errors = append(c.Errors, checkerError{
+		pos: pos,
+		msg: fmt.Sprintf(format, a...),
+	})
+}
+
+type Checker struct {
+	Scope      *Scope
+	scopeStack []*Scope
+	File       *ast.File
+	Errors     []checkerError
+}
+
+func NewChecker(File *ast.File) *Checker {
+	moduleScope := NewScope(GlobalScope())
+	return &Checker{
+		Scope:      moduleScope,
+		scopeStack: []*Scope{moduleScope},
+		File:       File,
 	}
 }
 
-func (c *checker) Check(decls []ast.Declaration) (map[ast.Expression]Type, map[string]Type) {
+func (c *Checker) pushScope() {
+	top := NewScope(c.Scope)
+	c.scopeStack = append(c.scopeStack, top)
+	c.Scope = top
+}
+
+func (c *Checker) popScope() {
+	if len(c.scopeStack) <= 2 {
+		panic("cannot pop module scope from scope stack")
+	}
+	c.scopeStack = c.scopeStack[:len(c.scopeStack)-1]
+	c.Scope = c.scopeStack[len(c.scopeStack)-1]
+}
+
+// TODO put this somewhere in ast package
+func filter[T ast.Declaration](decls []ast.Declaration) (filtered []T) {
 	for _, decl := range decls {
-		c.checkDeclaration(decl)
-	}
-	return c.types, c.symbols
-}
-
-func (c *checker) checkDeclaration(decl ast.Declaration) {
-	switch d := decl.(type) {
-	case *ast.TypedDecl:
-		fmt.Println(d)
-	}
-}
-
-func (c *checker) checkExpression(expr ast.Expression) (t Type) {
-	switch e := expr.(type) {
-	// case *ast.GroupExpr:
-	// 	t = c.checkExpression(e.Expr)
-	// 	c.types[e] = t
-	case *ast.LiteralExpr:
-		t = c.checkLiteral(e)
-		c.types[e] = t
-	case *ast.IdentExpr:
-		t = c.checkIdent(e)
-		c.types[e] = t
-	case *ast.UnaryOp:
-		t = c.checkUnary(e)
-		c.types[e] = t
-	case *ast.BinaryOp:
-		t = c.checkBinary(e)
-		c.types[e] = t
-	default:
-		panic("checker: unknown expression ast node type")
-	}
-	return t
-}
-
-func (c *checker) checkStatement(stmt ast.Statement) {
-	switch s := stmt.(type) {
-	case *ast.ReturnStmt:
-		c.checkExpression(s.Expr)
-	default:
-		panic("unknown statement ast node")
-	}
-}
-
-func (c *checker) checkTypedDecl(decl *ast.TypedDecl) {
-	switch decl.Kind {
-	case token.Val, token.Var:
-		typeKind := LookupPrimitive(decl.Type)
-		exprType := c.checkExpression(decl.Value)
-		if typeKind != exprType.Kind {
-			panic("declaration gets wrong type")
+		if d, ok := decl.(T); ok {
+			filtered = append(filtered, d)
 		}
-		c.symbols[decl.Ident.Lexeme] = exprType
-	default:
-		panic("unknown decl kind")
+	}
+	return filtered
+}
+
+// GatherPackageScope "forward declares" package level type and function declarations
+func (c *Checker) GatherModuleScope() {
+	for _, d := range filter[*ast.ClassDecl](c.File.Ast) {
+		if err := c.Scope.DeclareType(d.Name.Lexeme); err != nil {
+			c.err(d.Name.Position, err.Error())
+		}
+	}
+
+	for _, d := range filter[*ast.FuncDecl](c.File.Ast) {
+		if err := c.Scope.DeclareSymbol(d.Name.Lexeme, Func); err != nil {
+			c.err(d.Name.Position, err.Error())
+		}
+	}
+
+	for _, d := range filter[*ast.TypedDecl](c.File.Ast) {
+		if typ, ok := c.Scope.LookupType(d.Type); !ok {
+			c.err(d.Ident.Position, "unknown type in declaration of %v, %v", d.Ident.Lexeme, d.Type)
+		} else if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, typ); err != nil {
+			c.err(d.Ident.Position, err.Error())
+		} else if exprType := c.CheckExpr(d.Value); !Same(typ, exprType) {
+			c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, d.Type, exprType.String())
+		}
 	}
 }
 
-func (c *checker) checkLiteral(lit *ast.LiteralExpr) Type {
-	switch lit.Kind {
-	case token.Number:
-		return NewType(Int)
-	case token.String:
-		return NewType(String)
-	case token.True, token.False:
-		return NewType(Bool)
-	default:
-		panic("checker: unknown literal ast type")
+func (c *Checker) Check() {
+	// c.GatherPackageScope()
+	for _, decl := range c.File.Ast {
+		switch d := decl.(type) {
+		case *ast.FuncDecl:
+			fmt.Println("type checking func", d.Name.Lexeme)
+			c.CheckStatement(d.Body)
+		}
 	}
-}
-
-func (c *checker) checkIdent(ident *ast.IdentExpr) Type {
-	t, known := c.symbols[ident.Lexeme]
-	if !known {
-		panic(fmt.Sprintf("checker: %v not in symbol table", ident))
-	}
-	c.types[ident] = t
-	return t
-}
-
-func (c *checker) checkUnary(unary *ast.UnaryOp) (t Type) {
-	t = c.checkExpression(unary.Expr)
-	c.types[unary] = t
-	return t
-}
-
-func (c *checker) checkBinary(binary *ast.BinaryOp) Type {
-	lhsType := c.checkExpression(binary.Lhs)
-	rhsType := c.checkExpression(binary.Rhs)
-	if lhsType.Kind != rhsType.Kind {
-		panic("binary operands are not equal")
-	}
-	c.types[binary] = lhsType
-	return lhsType
 }

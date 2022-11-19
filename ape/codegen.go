@@ -23,8 +23,8 @@ func (cg *codegen) code(oc Opcode) {
 
 func (cg *codegen) lit(expr *ast.LiteralExpr) {
 	switch expr.Kind {
-	case token.Number:
-		// deduce size
+	case token.Integer:
+	case token.Rational:
 	case token.True:
 		cg.code(OpTrue)
 	case token.False:

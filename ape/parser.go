@@ -161,6 +161,9 @@ func (p *parser) consume(tk token.Kind, context string) {
 }
 
 func (p *parser) prev() token.Token {
+	if p.pos == 0 {
+		return token.New(token.Invalid, token.Position{Line: 1, Column: 0})
+	}
 	return p.tokens[p.pos-1]
 }
 
@@ -267,7 +270,7 @@ func (p *parser) Arguments() (args []ast.Expression) {
 
 func (p *parser) Atom() ast.Expression {
 	switch p.peek().Kind {
-	case token.Number, token.String, token.True, token.False:
+	case token.Integer, token.Rational, token.String, token.True, token.False:
 		return ast.NewLiteralExpr(p.next())
 	case token.Identifier:
 		return ast.NewIdentExpr(p.next())

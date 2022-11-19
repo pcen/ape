@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pcen/ape/ape"
 	"github.com/pcen/ape/ape/ast"
 )
 
@@ -44,17 +43,8 @@ var (
 	}`
 )
 
-func parse(source string) (*ast.File, []ape.ParseError) {
-	tokens := ape.NewLexer().LexString(source)
-	fmt.Println(tokens)
-	parser := ape.NewParser(tokens)
-	node := parser.File()
-	errors, _ := parser.Errors()
-	return node, errors
-}
-
 func TestParsing(t *testing.T) {
-	prog, errs := parse(prog1)
+	prog, errs := Parse(prog1)
 	fmt.Println("module:", prog.Module)
 	fmt.Println("ast:")
 	ast.PrettyPrint(prog.Ast)
