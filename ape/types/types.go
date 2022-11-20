@@ -47,8 +47,6 @@ var (
 		Double,
 		Char,
 		String,
-
-		Func,
 	}
 )
 
@@ -64,10 +62,23 @@ func (nt NamedType) String() string {
 	return nt.name
 }
 
+type Function struct {
+	Ret Type
+}
+
+func NewFunctionType(returns Type) Function {
+	return Function{Ret: returns}
+}
+
+func (f Function) String() string {
+	return fmt.Sprintf("func %v", f.Ret)
+}
+
 // assert all types implement Type interface
 var (
 	_ Type = Invalid
 	_ Type = NamedType{}
+	_ Type = Function{}
 )
 
 var (
@@ -89,7 +100,6 @@ var (
 		Double:    "double",
 		Char:      "char",
 		String:    "string",
-		Func:      "func",
 	}
 
 	typeLookup = map[string]PrimitaveType{

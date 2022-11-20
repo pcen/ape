@@ -28,7 +28,12 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) (t Type) {
 		return
 
 	case *ast.FuncDecl:
-		return
+		retType, ok := c.Scope.LookupType(d.ReturnType.Lexeme)
+		if !ok {
+			c.err(d.Name.Position, "undefined return type for %v: %v", d.Name.Lexeme, d.ReturnType.Lexeme)
+		}
+		fmt.Printf("%v returns type %v", d.Name, retType)
+		t = retType
 
 	default:
 		panic("cannot type check declaration " + d.DeclStr())

@@ -511,6 +511,10 @@ func (p *parser) FuncDecl() *ast.FuncDecl {
 	fd.Params = p.ParamList()
 	p.consume(token.CloseParen, "end of function signature parameters")
 
+	if p.match(token.Identifier) {
+		fd.ReturnType = p.prev()
+	}
+
 	fd.Body = p.BlockStmt()
 	return fd
 }
