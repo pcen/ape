@@ -111,14 +111,12 @@ func (p *parser) Errors() ([]ParseError, bool) {
 func (p *parser) errExpected(kind token.Kind, context string) {
 	pos, got := p.prev().Position, p.prev().String()
 	err := NewParseError(pos, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
-	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
 }
 
 func (p *parser) err(format string, args ...interface{}) {
 	err := NewParseError(p.prev().Position, fmt.Sprintf(format, args...))
-	fmt.Println("parser error:", err)
 	p.errors = append(p.errors, err)
 	panic(err)
 }
