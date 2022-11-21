@@ -32,9 +32,10 @@ func (d *TypedDecl) DeclStr() string {
 }
 
 type FuncDecl struct {
-	Name   token.Token
-	Params []*ParamDecl
-	Body   *BlockStmt
+	Name       token.Token
+	Params     []*ParamDecl
+	ReturnType token.Token
+	Body       *BlockStmt
 }
 
 func (d *FuncDecl) DeclStr() string {

@@ -83,7 +83,8 @@ const (
 	Sep // ; or \n
 
 	Comment
-	Number
+	Integer
+	Rational
 	Identifier
 	Eof
 )
@@ -163,6 +164,11 @@ var (
 
 		Sep: ";",
 
+		Comment:    "<COMMENT>",
+		Integer:    "<INTEGER>",
+		Rational:   "<RATIONAL>",
+		Identifier: "<IDENTIFIER>",
+
 		Eof: "<EOF>",
 	}
 
@@ -199,11 +205,11 @@ func GetKeyword(identifier string) (Kind, bool) {
 	return Invalid, false
 }
 
-func (tt Kind) String() string {
-	if tt == 0 {
+func (k Kind) String() string {
+	if k == 0 {
 		panic("no string for 0 initialized TokenType")
 	}
-	return tokenLexemes[tt]
+	return tokenLexemes[k]
 }
 
 type Position struct {

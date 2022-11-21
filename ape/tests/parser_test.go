@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pcen/ape/ape"
 	"github.com/pcen/ape/ape/ast"
 )
 
@@ -15,12 +14,14 @@ var (
 
 	}
 
+	var abc int = 100
+
 	func main(a int) {
 		var b int = 10
 		var c int = 20
 		a.b().c.d()() *= 2
 		a[foo.bar]++
-		if a > b {
+		if zzzzzzz > b {
 			b += 20
 		} elif a == b {
 			b = 0
@@ -42,17 +43,8 @@ var (
 	}`
 )
 
-func parse(source string) (*ast.File, []ape.ParseError) {
-	tokens := ape.NewLexer().LexString(source)
-	fmt.Println(tokens)
-	parser := ape.NewParser(tokens)
-	node := parser.File()
-	errors, _ := parser.Errors()
-	return node, errors
-}
-
 func TestParsing(t *testing.T) {
-	prog, errs := parse(prog1)
+	prog, errs := Parse(prog1)
 	fmt.Println("module:", prog.Module)
 	fmt.Println("ast:")
 	ast.PrettyPrint(prog.Ast)

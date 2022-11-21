@@ -1,3 +1,0 @@
-package ape
-
-func resolve() {}

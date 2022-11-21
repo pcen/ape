@@ -1,7 +1,6 @@
 package ape
 
 import (
-	"fmt"
 	"os"
 	"unicode"
 
@@ -15,7 +14,8 @@ const (
 var (
 	stmtEndTokens = map[token.Kind]bool{
 		token.Identifier: true,
-		token.Number:     true,
+		token.Integer:    true,
+		token.Rational:   true,
 		token.String:     true,
 		token.True:       true,
 		token.False:      true,
@@ -159,7 +159,6 @@ func (l *lexer) skipWhiteSpace() bool {
 			return true
 		}
 		if !iswspace(b) {
-			fmt.Printf("!ws: %c\n", b)
 			l.back()
 			return false
 		}
@@ -189,19 +188,19 @@ func (l *lexer) identifier() token.Token {
 
 func (l *lexer) number() token.Token {
 	start, end := l.idx, 0
-	dot := false
+	kind := token.Integer
 	for {
 		b, _ := l.next()
-		if !isdigit(b) || (b == '.' && dot) {
+		if !(isdigit(b) || b == '.' && kind == token.Integer) {
 			l.back()
 			end = l.idx
 			break
 		}
 		if b == '.' {
-			dot = true
+			kind = token.Rational
 		}
 	}
-	return l.NewLexemeToken(token.Number, string(l.buf[start:end]))
+	return l.NewLexemeToken(kind, string(l.buf[start:end]))
 }
 
 func (l *lexer) comment() token.Token {
@@ -238,7 +237,6 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Eof)
 	}
 	b, _ := l.next()
-	fmt.Printf("b is: %c\n", b)
 	if isalpha(b) || b == '_' {
 		// variable or keyword
 		l.back()
@@ -335,10 +333,6 @@ func (l *lexer) step() token.Token {
 		return l.NewToken(token.Sep)
 
 	}
-	if b == 0 {
-		fmt.Println("GOT 0")
-	}
-	fmt.Printf("unknown byte: %c\n", b)
-
-	return l.NewToken(token.Invalid)
+	panic("invalid byte: " + string(b))
+	// return l.NewToken(token.Invalid)
 }
