@@ -1,0 +1,37 @@
+program      -> decl*
+
+decl         -> typedDecl | funcDecl | classDecl
+
+typedDecl    -> ("val" | "var") IDENT type  "=" expr
+funcDecl     -> "func" IDENT "(" parameters ")" blockStmt
+classDecl    -> "class" IDENT "{" classBody "}"
+classBody    -> blockStmt
+
+parameters   -> paramDecl ( "," paramDecl )*
+paramDecl    -> IDENT type
+
+blockStmt    -> "{" stmtList "}"
+stmtList     -> (stmt ";") *
+
+stmt         -> simpleStmt | compoundStmt
+simpleStmt   -> incStmt | assignment
+incStmt      -> expr ("++" | "--")
+assignment   -> expr assignOp expr
+assignOp     -> "=" | "+=" | "*=" | "-=" | "/=" | "**="
+
+compoundStmt -> ifStmt | forStmt
+ifStmt       -> "if" expr "{" "}" "else" "{" "}"
+forStmt      -> "for" "{" "}"
+
+expr         -> equality
+equality     -> comparison ( ( "!=" | "==" ) comparison )*
+comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
+term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
+factor       -> unary ( ( "/" | "*" | "&" ) unary )*
+unary        -> ( "!" | "-" | "~" ) unary | call
+call         -> primary ( "(" arguments ")" )*
+primary      -> NUMBER | STRING | IDENT | "true" | "false" | group
+group        -> "(" expr ")"
+
+arguments    -> expr ( "," expr ) *
+type         -> IDENT

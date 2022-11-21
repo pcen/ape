@@ -1,0 +1,16 @@
+# distributions for rules containing star expansions
+# for the given parent rule, expand star rules n times,
+# where n picked from:
+# u[x, y] - uniform distribution from x to y
+# b[pct]  - n = 1 with pct% chance, else 0
+
+program: u[1, 100]
+parameters: u[0, 4]
+stmtList: u[1, 10]
+equality: b[5]
+comparison: b[5]
+term: b[10]
+factor: b[15]
+unary: b[5]
+call: b[5]
+arguments: u[0, 4]
