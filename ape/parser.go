@@ -2,6 +2,7 @@ package ape
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/token"
@@ -470,8 +471,7 @@ func (p *parser) TypedDecl() *ast.TypedDecl {
 		p.consume(token.Identifier, "typed decl identifier")
 		decl.Ident = p.prev()
 
-		p.consume(token.Identifier, "typed decl type")
-		decl.Type = p.prev().Lexeme
+		decl.Type = p.Type()
 
 		if p.match(token.Assign) {
 			decl.Value = p.Expression()
@@ -513,17 +513,15 @@ func (p *parser) ClassDecl() *ast.ClassDecl {
 
 // Miscellaneous
 
-func (p *parser) Type() (expr ast.Expression) {
+func (p *parser) Type() *ast.TypeExpr {
 	p.consume(token.Identifier, "type name")
-	expr = ast.NewIdentExpr(p.prev())
+	lexemes := make([]string, 0, 1)
+	lexemes = append(lexemes, p.prev().Lexeme)
 
 	// type is from a module
 	for p.match(token.Dot) {
 		p.consume(token.Identifier, "imported type name")
-		expr = &ast.DotExpr{
-			Expr:  expr,
-			Field: ast.NewIdentExpr(p.prev()),
-		}
+		lexemes = append(lexemes, p.prev().Lexeme)
 	}
-	return expr
+	return &ast.TypeExpr{Name: strings.Join(lexemes, ".")}
 }

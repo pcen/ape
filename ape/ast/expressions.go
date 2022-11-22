@@ -119,4 +119,9 @@ func (e *IndexExpr) ExprStr() string {
 }
 
 type TypeExpr struct {
+	Name string
+}
+
+func (e *TypeExpr) ExprStr() string {
+	return e.Name
 }

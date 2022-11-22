@@ -86,18 +86,18 @@ func (c *Checker) GatherModuleScope() {
 	}
 
 	for _, d := range filter[*ast.TypedDecl](c.File.Ast) {
-		if typ, ok := c.Scope.LookupType(d.Type); !ok {
+		if typ, ok := c.Scope.LookupType(d.Type.Name); !ok {
 			c.err(d.Ident.Position, "unknown type in declaration of %v, %v", d.Ident.Lexeme, d.Type)
 		} else if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, typ); err != nil {
 			c.err(d.Ident.Position, err.Error())
 		} else if exprType := c.CheckExpr(d.Value); !Same(typ, exprType) {
-			c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, d.Type, exprType.String())
+			c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, d.Type.Name, exprType.String())
 		}
 	}
 }
 
 func (c *Checker) Check() {
-	// c.GatherPackageScope()
+	// c.GatherModuleScope()
 	for _, decl := range c.File.Ast {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:

@@ -23,18 +23,18 @@ func (d *ParamDecl) DeclStr() string {
 type TypedDecl struct {
 	Kind  token.Kind // val | var
 	Ident token.Token
-	Type  string
+	Type  *TypeExpr
 	Value Expression
 }
 
 func (d *TypedDecl) DeclStr() string {
-	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type, d.Value.ExprStr())
+	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type.ExprStr(), d.Value.ExprStr())
 }
 
 type FuncDecl struct {
 	Name       token.Token
 	Params     []*ParamDecl
-	ReturnType Expression
+	ReturnType *TypeExpr
 	Body       *BlockStmt
 }
 
