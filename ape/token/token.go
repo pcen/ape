@@ -23,6 +23,7 @@ const (
 
 	Type    // type
 	Class   // class
+	This    // this
 	Func    // func
 	Public  // public
 	Private // private
@@ -66,10 +67,10 @@ const (
 	Decrement // --
 
 	// bitwise
-	BitAnd    // &
-	BitOr     // |
-	BitNegate // ~
-	BitXOR    // ^
+	Ampersand // &
+	Pipe      // |
+	Tilde     // ~
+	Caret     // ^
 
 	Dot        // .
 	Comma      // ,
@@ -109,6 +110,7 @@ var (
 
 		Type:    "type",
 		Class:   "class",
+		This:    "this",
 		Func:    "func",
 		Public:  "public",
 		Private: "private",
@@ -148,10 +150,10 @@ var (
 		Increment: "++",
 		Decrement: "--",
 
-		BitAnd:    "&",
-		BitOr:     "|",
-		BitNegate: "~",
-		BitXOR:    "^",
+		Ampersand: "&",
+		Pipe:      "|",
+		Tilde:     "~",
+		Caret:     "^",
 
 		Dot:        ".",
 		Comma:      ",",
@@ -185,6 +187,7 @@ var (
 		"or":      Or,
 		"type":    Type,
 		"class":   Class,
+		"this":    This,
 		"func":    Func,
 		"public":  Public,
 		"private": Private,

@@ -74,7 +74,7 @@ func (p *parser) Errors() ([]ParseError, bool) {
 }
 
 func (p *parser) errExpected(kind token.Kind, context string) {
-	pos, got := p.prev().Position, p.prev().String()
+	pos, got := p.peek().Position, p.peek().String()
 	err := NewParseError(pos, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
 	p.errors = append(p.errors, err)
 	fmt.Println("parser error:", err)
@@ -183,16 +183,16 @@ func (p *parser) Comparison() ast.Expression {
 }
 
 func (p *parser) Term() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Factor, token.Minus, token.Plus, token.BitOr, token.BitXOR)
+	return p.leftAssociativeBinaryOp(p.Factor, token.Minus, token.Plus, token.Pipe, token.Caret)
 }
 
 func (p *parser) Factor() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.BitAnd)
+	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.Ampersand)
 }
 
 func (p *parser) Unary() ast.Expression {
 	switch p.peek().Kind {
-	case token.Bang, token.Minus, token.BitNegate:
+	case token.Bang, token.Minus, token.Tilde:
 		return ast.NewUnaryOp(p.next().Kind, p.Unary())
 	default:
 		return p.Primary()
@@ -276,7 +276,7 @@ func (p *parser) Statement() (s ast.Statement) {
 	// the first rule in a simple statement is always an expression
 	// - parse simple statement on any of the possible first terminals in an expression
 	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, // atom
-		token.Bang, token.Minus, token.BitNegate: // unary operators
+		token.Bang, token.Minus, token.Tilde: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
 
@@ -499,14 +499,38 @@ func (p *parser) FuncDecl() *ast.FuncDecl {
 	return fd
 }
 
+// Class Parsing
+
 func (p *parser) ClassDecl() *ast.ClassDecl {
 	cd := &ast.ClassDecl{}
 	p.consume(token.Class, "class declaration start")
 	p.consume(token.Identifier, "class name")
 	cd.Name = p.prev()
-	p.BlockStmt()
-
+	cd.Body = p.ClassBody()
 	return cd
+}
+
+func (p *parser) ClassBody() (decls []ast.Declaration) {
+	p.consume(token.OpenBrace, "begin class body")
+	for p.peekIs(token.Identifier, token.Func) {
+		switch p.peek().Kind {
+		case token.Identifier:
+			decls = append(decls, p.MemberDecl())
+		case token.Func:
+			decls = append(decls, p.FuncDecl())
+		}
+		p.separator("end of declaration in class body")
+	}
+	p.consume(token.CloseBrace, "end class body")
+	return decls
+}
+
+func (p *parser) MemberDecl() *ast.MemberDecl {
+	p.consume(token.Identifier, "class member name")
+	return &ast.MemberDecl{
+		Name: p.prev(),
+		Type: p.Type(),
+	}
 }
 
 // Miscellaneous

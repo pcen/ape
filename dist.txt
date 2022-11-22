@@ -4,9 +4,15 @@
 # u[x, y] - uniform distribution from x to y
 # b[pct]  - n = 1 with pct% chance, else 0
 
+
 program: u[10, 30]
+
+classBody: u[0, 10]
+
 parameters: u[0, 5]
+
 stmtList: u[2, 20]
+
 equality: b[10]
 comparison: b[10]
 term: b[10]

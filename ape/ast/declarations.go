@@ -44,10 +44,20 @@ func (d *FuncDecl) DeclStr() string {
 
 type ClassDecl struct {
 	Name token.Token
+	Body []Declaration
 }
 
 func (d *ClassDecl) DeclStr() string {
 	return fmt.Sprintf("(decl class %v)", d.Name.Lexeme)
+}
+
+type MemberDecl struct {
+	Name token.Token
+	Type *TypeExpr
+}
+
+func (d *MemberDecl) DeclStr() string {
+	return fmt.Sprintf("(decl member %v %v)", d.Name, d.Type.ExprStr())
 }
 
 type ErrDecl struct {

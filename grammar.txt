@@ -6,7 +6,9 @@ decl         -> (typedDecl | funcDecl | classDecl) ";"
 typedDecl    -> ("val" | "var") IDENT type  "=" expr
 funcDecl     -> "func" IDENT "(" parameters? ")" type blockStmt
 
-classDecl    -> "class" IDENT blockStmt
+classDecl    -> "class" IDENT classBody
+classBody    -> "{" ( ( memberDecl | funcDecl ) ";" )* "}"
+memberDecl   -> IDENT type
 
 parameters   -> paramDecl ( "," paramDecl )*
 paramDecl    -> IDENT type

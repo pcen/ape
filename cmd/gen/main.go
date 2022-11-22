@@ -507,14 +507,10 @@ func NewGrammar(start string, rules []*rule, cfg *Config) *Grammar {
 eval is the recursive function that drives generating derivations
 
   - need to be careful with how stars are expanded or stack will overflow
+    since derivations are unbounded in size
 
   - a config text file controls the behaviour of * expansion for given parent
     rules
-
-  - remove "list" struct and store []*star directly
-
-  - parser should return a *star instead of *or when there is only a single
-    rule on the rhs
 
   - * expansion handled well, but or selection leads to bad input ie. unary
     repeatedly selects the option ( "!" | "-" | "~" ) unary leading to

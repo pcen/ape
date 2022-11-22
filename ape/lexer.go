@@ -307,16 +307,16 @@ func (l *lexer) step() token.Token {
 		return l.pick('=', token.GreaterEq, token.Greater)
 
 	case '&':
-		return l.NewToken(token.BitAnd)
+		return l.NewToken(token.Ampersand)
 
 	case '|':
-		return l.NewToken(token.BitOr)
+		return l.NewToken(token.Pipe)
 
 	case '~':
-		return l.NewToken(token.BitNegate)
+		return l.NewToken(token.Tilde)
 
 	case '^':
-		return l.NewToken(token.BitXOR)
+		return l.NewToken(token.Caret)
 
 	case '.':
 		return l.NewToken(token.Dot)
