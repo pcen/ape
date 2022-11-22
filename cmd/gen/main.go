@@ -24,7 +24,7 @@ import (
 // rule -> NAME "->" or End
 // or -> list ("|" list)*
 // list -> star*
-// star -> ref ?* | primitave ?* | literal ?* | group ?*
+// star -> ref "*"? | primitave "*"? | literal "*"? | group "*"?
 // group -> "(" or ")"
 
 // config file is a list of lines with the format:
@@ -61,17 +61,22 @@ func (r *rule) str() string {
 // sequence of pipe-separated grammar rules
 // of which one is used in derivation
 type or struct {
-	ors []*list
+	ors [][]*unary
 }
 
-func (o *or) pick() *list {
+func (o *or) pick() []*unary {
 	return o.ors[rand.Intn(len(o.ors))]
 }
 
 func (o *or) str() string {
 	var sb strings.Builder
 	for i, l := range o.ors {
-		sb.WriteString(l.str())
+		for j, u := range l {
+			sb.WriteString(u.str())
+			if j != len(l)-1 {
+				sb.WriteString(" ")
+			}
+		}
 		if i != len(o.ors)-1 {
 			sb.WriteString(" | ")
 		}
@@ -79,45 +84,44 @@ func (o *or) str() string {
 	return sb.String()
 }
 
-// a list of grammar rules that are applied sequentially
-type list struct {
-	stars []*star
+// a grammar rule followed by * or ?
+type unary struct {
+	n  node
+	op Kind
 }
 
-func (l *list) str() string {
-	var sb strings.Builder
-	for i, s := range l.stars {
-		sb.WriteString(s.str())
-		if i != len(l.stars)-1 {
-			sb.WriteString(" ")
+func (u *unary) expand(count int) []node {
+	switch u.op {
+	case None:
+		return []node{u.n}
+	case Star:
+		repeated := make([]node, count)
+		for i := range repeated {
+			repeated[i] = u.n
 		}
+		return repeated
+	case Question:
+		// TODO: also configure the chance of evaluating an optional rule
+		// but since these shouldn't blow up the way * can 50% should be ok
+		if CheckPct(50) {
+			return []node{u.n}
+		}
+		return []node{}
+	default:
+		panic("invalid operator for unary:" + u.op.String())
 	}
-	return sb.String()
 }
 
-// a grammar rule that can be applied 0 or more times
-type star struct {
-	n        node
-	repeated bool
-}
-
-func (s *star) expand(count int) []node {
-	if !s.repeated {
-		return []node{s.n}
+func (u *unary) str() string {
+	switch u.op {
+	case Star:
+		return fmt.Sprintf("%v*", u.n.str())
+	case Question:
+		return fmt.Sprintf("%v?", u.n.str())
+	case None:
+		return u.n.str()
 	}
-	repeated := make([]node, count)
-	for i := range repeated {
-		repeated[i] = s.n
-	}
-	return repeated
-}
-
-func (s *star) str() string {
-	if s.repeated {
-		return fmt.Sprintf("%v*", s.n.str())
-	} else {
-		return s.n.str()
-	}
+	panic("invalid operator for unary:" + u.op.String())
 }
 
 // groups a set of grammar rules in parentheses
@@ -183,9 +187,7 @@ func (p *parser) Rule() *rule {
 }
 
 func (p *parser) Or() *or {
-	o := &or{
-		ors: make([]*list, 0),
-	}
+	o := &or{ors: make([][]*unary, 0)}
 	o.ors = append(o.ors, p.List())
 	for p.match(Pipe) {
 		o.ors = append(o.ors, p.List())
@@ -193,32 +195,35 @@ func (p *parser) Or() *or {
 	return o
 }
 
-func (p *parser) List() *list {
-	l := &list{stars: make([]*star, 0)}
-	l.stars = append(l.stars, p.Star())
+func (p *parser) List() (list []*unary) {
+	list = append(list, p.Unary())
 	for p.peekIs(Ref, Primitave, Literal, Lparen) {
-		l.stars = append(l.stars, p.Star())
+		list = append(list, p.Unary())
 	}
-	return l
+	return list
 }
 
-func (p *parser) Star() *star {
-	s := &star{}
-
+func (p *parser) Unary() *unary {
+	u := &unary{}
 	switch p.peek().Kind {
 	case Ref:
-		s.n = p.Ref()
+		u.n = p.Ref()
 	case Primitave:
-		s.n = p.Primitave()
+		u.n = p.Primitave()
 	case Literal:
-		s.n = p.Literal()
+		u.n = p.Literal()
 	case Lparen:
-		s.n = p.Group()
+		u.n = p.Group()
 	}
-	if p.match(Star) {
-		s.repeated = true
+	switch {
+	case p.match(Star):
+		u.op = Star
+	case p.match(Question):
+		u.op = Question
+	default:
+		u.op = None
 	}
-	return s
+	return u
 }
 
 func (p *parser) Group() *group {
@@ -284,14 +289,16 @@ func (p *parser) consume(k Kind) {
 type Kind int
 
 const (
-	Ref Kind = iota + 1
+	None Kind = iota + 1
+	Ref
 	Primitave
 	Literal
-	Arrow
-	Lparen
-	Rparen
-	Pipe
-	Star
+	Arrow    // ->
+	Lparen   // (
+	Rparen   // )
+	Pipe     // |
+	Star     // *
+	Question // ?
 	Ws
 	End
 )
@@ -306,6 +313,7 @@ func (k Kind) String() string {
 		Rparen:    "<RPAREN>",
 		Pipe:      "<PIPE>",
 		Star:      "<STAR>",
+		Question:  "<QUESTION>",
 		Ws:        "<WS>",
 		End:       "<END>",
 	}[k]
@@ -317,6 +325,7 @@ var (
 		')': Rparen,
 		'|': Pipe,
 		'*': Star,
+		'?': Question,
 	}
 )
 
@@ -515,15 +524,15 @@ func (g *Grammar) eval(n node) {
 	// fmt.Printf("evaluating %v:%v\n", reflect.TypeOf(n), n.str())
 	// fmt.Printf("current buf: %s\n", g.buf)
 	switch n := n.(type) {
+
 	case *or:
-		g.eval(n.pick())
-	case *list:
-		for _, s := range n.stars {
-			g.eval(s)
+		for _, u := range n.pick() {
+			g.eval(u)
 		}
-	case *star:
+
+	case *unary:
 		count := 1
-		if n.repeated {
+		if n.op == Star {
 			var ok bool
 			count, ok = g.Cfg.Get(g.cur)
 			if !ok {
@@ -593,6 +602,10 @@ func (c *Config) Get(rule string) (int, bool) {
 	return 0, false
 }
 
+func CheckPct(pct int) bool {
+	return 1+rand.Intn(100) <= pct
+}
+
 func ReadConfig(file string) *Config {
 	cfg := &Config{
 		Dist: make(map[string]func() int),
@@ -613,7 +626,7 @@ func ReadConfig(file string) *Config {
 			var pct int
 			fmt.Sscanf(distStr, "b[%d]", &pct)
 			cfg.Dist[rule] = func() int {
-				if rand.Intn(100) <= pct {
+				if CheckPct(pct) {
 					return 1
 				}
 				return 0

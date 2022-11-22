@@ -4,7 +4,7 @@ moduleDecl   -> "module" IDENT ";"
 decl         -> (typedDecl | funcDecl | classDecl) ";"
 
 typedDecl    -> ("val" | "var") IDENT type  "=" expr
-funcDecl     -> "func" IDENT "(" parameters ")" type blockStmt
+funcDecl     -> "func" IDENT "(" parameters? ")" type blockStmt
 
 classDecl    -> "class" IDENT blockStmt
 
@@ -33,7 +33,7 @@ comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
 term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
 factor       -> unary ( ( "/" | "*" | "&" ) unary )*
 unary        -> ( "!" | "-" | "~" ) unary | primary
-primary      -> atom ( ( "(" arguments ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
+primary      -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
 atom         -> NUMBER | STRING | IDENT | "true" | "false" | group
 group        -> "(" expr ")"
 

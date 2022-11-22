@@ -457,9 +457,7 @@ func (p *parser) ParamDecl() *ast.ParamDecl {
 	if p.match(token.Identifier) {
 		decl.Ident = p.prev()
 	}
-	if p.match(token.Identifier) {
-		decl.Type = p.prev().Lexeme
-	}
+	decl.Type = p.Type()
 	return decl
 }
 

@@ -12,4 +12,6 @@ comparison: b[10]
 term: b[10]
 factor: b[10]
 primary: b[30]
+
 arguments: u[0, 5]
+type: u[0, 2]

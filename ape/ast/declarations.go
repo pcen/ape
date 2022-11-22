@@ -13,7 +13,7 @@ type Declaration interface {
 // function parameters
 type ParamDecl struct {
 	Ident token.Token
-	Type  string
+	Type  *TypeExpr
 }
 
 func (d *ParamDecl) DeclStr() string {
