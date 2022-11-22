@@ -76,14 +76,14 @@ func (p *parser) errExpected(kind token.Kind, context string) {
 	pos, got := p.prev().Position, p.prev().String()
 	err := NewParseError(pos, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
 	p.errors = append(p.errors, err)
-	fmt.Println(err)
+	fmt.Println("parser error:", err)
 	panic(err)
 }
 
 func (p *parser) err(format string, args ...interface{}) {
 	err := NewParseError(p.prev().Position, fmt.Sprintf(format, args...))
 	p.errors = append(p.errors, err)
-	fmt.Println("parser:", err)
+	fmt.Println("parser error:", err)
 	panic(err)
 }
 
@@ -493,8 +493,8 @@ func (p *parser) FuncDecl() *ast.FuncDecl {
 	fd.Params = p.ParamList()
 	p.consume(token.CloseParen, "end of function signature parameters")
 
-	if p.match(token.Identifier) {
-		fd.ReturnType = p.prev()
+	if p.peekIs(token.Identifier) {
+		fd.ReturnType = p.Type()
 	}
 
 	fd.Body = p.BlockStmt()
@@ -509,4 +509,21 @@ func (p *parser) ClassDecl() *ast.ClassDecl {
 	p.BlockStmt()
 
 	return cd
+}
+
+// Miscellaneous
+
+func (p *parser) Type() (expr ast.Expression) {
+	p.consume(token.Identifier, "type name")
+	expr = ast.NewIdentExpr(p.prev())
+
+	// type is from a module
+	for p.match(token.Dot) {
+		p.consume(token.Identifier, "imported type name")
+		expr = &ast.DotExpr{
+			Expr:  expr,
+			Field: ast.NewIdentExpr(p.prev()),
+		}
+	}
+	return expr
 }

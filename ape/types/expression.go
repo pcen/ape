@@ -41,7 +41,7 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		t = t1
 
 	case *ast.IdentExpr:
-		typ, ok := c.Scope.LookupSymbol(e.Lexeme)
+		typ, ok := c.Scope.LookupSymbol(e.Ident.Lexeme)
 		if !ok {
 			c.errUndefinedIdent(e)
 		}

@@ -34,7 +34,7 @@ func (d *TypedDecl) DeclStr() string {
 type FuncDecl struct {
 	Name       token.Token
 	Params     []*ParamDecl
-	ReturnType token.Token
+	ReturnType Expression
 	Body       *BlockStmt
 }
 

@@ -21,7 +21,7 @@ func (c *Checker) errTypeMissmatch(pos token.Position, ident string, expected, g
 }
 
 func (c *Checker) errUndefinedIdent(expr *ast.IdentExpr) {
-	c.err(expr.Token.Position, "undefined identifier %v", expr.Token.Lexeme)
+	c.err(expr.Ident.Position, "undefined identifier %v", expr.Ident.Lexeme)
 }
 
 func (c *Checker) err(pos token.Position, format string, a ...interface{}) {

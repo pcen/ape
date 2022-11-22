@@ -4,7 +4,7 @@ moduleDecl   -> "module" IDENT ";"
 decl         -> (typedDecl | funcDecl | classDecl) ";"
 
 typedDecl    -> ("val" | "var") IDENT type  "=" expr
-funcDecl     -> "func" IDENT "(" parameters ")" blockStmt
+funcDecl     -> "func" IDENT "(" parameters ")" type blockStmt
 
 classDecl    -> "class" IDENT blockStmt
 
@@ -38,4 +38,4 @@ atom         -> NUMBER | STRING | IDENT | "true" | "false" | group
 group        -> "(" expr ")"
 
 arguments    -> expr ( "," expr ) *
-type         -> IDENT
+type         -> IDENT | IDENT ( "." IDENT )*

@@ -53,15 +53,15 @@ func NewLiteralExpr(token token.Token) Expression {
 }
 
 type IdentExpr struct {
-	token.Token
+	Ident token.Token
 }
 
 func (e *IdentExpr) ExprStr() string {
-	return fmt.Sprintf("%v", e.Token)
+	return fmt.Sprintf("%v", e.Ident)
 }
 
 func NewIdentExpr(token token.Token) *IdentExpr {
-	return &IdentExpr{Token: token}
+	return &IdentExpr{Ident: token}
 }
 
 type UnaryOp struct {
@@ -106,7 +106,7 @@ type DotExpr struct {
 }
 
 func (e *DotExpr) ExprStr() string {
-	return fmt.Sprintf("(%v.%v)", e.Expr.ExprStr(), e.Field.Lexeme)
+	return fmt.Sprintf("(%v.%v)", e.Expr.ExprStr(), e.Field.ExprStr())
 }
 
 type IndexExpr struct {
@@ -116,4 +116,7 @@ type IndexExpr struct {
 
 func (e *IndexExpr) ExprStr() string {
 	return fmt.Sprintf("(%v[%v])", e.Expr.ExprStr(), e.Index.ExprStr())
+}
+
+type TypeExpr struct {
 }
