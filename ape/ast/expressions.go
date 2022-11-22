@@ -2,12 +2,26 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pcen/ape/ape/token"
 )
 
 type Expression interface {
 	ExprStr() string
+}
+
+func exprListStr(exprs []Expression) string {
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i, expr := range exprs {
+		sb.WriteString(expr.ExprStr())
+		if i != len(exprs)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
 
 type ErrExpr struct {
@@ -83,7 +97,7 @@ type CallExpr struct {
 }
 
 func (e *CallExpr) ExprStr() string {
-	return fmt.Sprintf("(%v() %v)", e.Callee.ExprStr(), e.Args)
+	return fmt.Sprintf("(%v() %v)", e.Callee.ExprStr(), exprListStr(e.Args))
 }
 
 type DotExpr struct {

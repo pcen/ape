@@ -7,43 +7,6 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
-// program      -> module decl*
-
-// module       -> "module" IDENT
-// decl         -> typedDecl | funcDecl
-
-// typedDecl    -> (VAL | VAR) IDENT type  "=" expression
-// funcDecl     -> "func" IDENT "(" parameters? ")" blockStmt
-// classDecl    -> "class" IDENT "{" classBody "}"
-// classBody    ->
-
-// parameters   -> (paramDecl ",")*
-// paramDecl    -> IDENT type
-
-// blockStmt    -> "{" stmtList "}"
-// stmtList     -> (stmt;) *
-
-// stmt         -> simpleStmt | compoundStmt
-// simpleStmt   -> incStmt | assignment
-// incStmt      -> expression [++ | --]
-// assignment   -> expression assign_op expression
-// assign_op    -> = | += | *= | -= | /= | **=
-
-// compoundStmt -> ifStmt | forStmt
-
-// expression   -> equality ;
-// equality     -> comparison ( ( "!=" | "==" ) comparison )*
-// comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
-// term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
-// factor       -> unary ( ( "/" | "*" | "&" ) unary )*
-// unary        -> ( "!" | "-" | "~" ) unary | primary
-// primary         -> atom ( ["(" arguments? ")" | "." IDENT] )*
-// atom         -> NUMBER | STRING | IDENT | "true" | "false" | group
-// selector     -> "." IDENT
-// group        -> "(" expression ")"
-
-// arguments    -> expression ( "," expression ) *
-
 // propagates panic errors that are not ParseError
 func sync(f func()) {
 	if err := recover(); err == nil {
@@ -95,6 +58,7 @@ type parser struct {
 	tokens []token.Token
 	pos    uint
 	errors []ParseError
+	decls  []ast.Declaration
 }
 
 func NewParser(tokens []token.Token) Parser {
@@ -112,12 +76,14 @@ func (p *parser) errExpected(kind token.Kind, context string) {
 	pos, got := p.prev().Position, p.prev().String()
 	err := NewParseError(pos, fmt.Sprintf("expected %v, got %v parsing %v", kind, got, context))
 	p.errors = append(p.errors, err)
+	fmt.Println(err)
 	panic(err)
 }
 
 func (p *parser) err(format string, args ...interface{}) {
 	err := NewParseError(p.prev().Position, fmt.Sprintf(format, args...))
 	p.errors = append(p.errors, err)
+	fmt.Println("parser:", err)
 	panic(err)
 }
 
@@ -185,11 +151,12 @@ func (p *parser) File() (file *ast.File) {
 	return f
 }
 
-func (p *parser) Program() (decls []ast.Declaration) {
+func (p *parser) Program() []ast.Declaration {
+	p.decls = make([]ast.Declaration, 0)
 	for !p.match(token.Eof) {
-		decls = append(decls, p.Declaration())
+		p.decls = append(p.decls, p.Declaration())
 	}
-	return decls
+	return p.decls
 }
 
 // Expressions
@@ -299,12 +266,16 @@ func (p *parser) separator(context string) {
 func (p *parser) Statement() (s ast.Statement) {
 	defer sync(func() {
 		s = &ast.ErrStmt{}
+		ast.PrettyPrint(p.decls)
 		p.skipTo(stmtStart)
 	})
 
 	switch p.peek().Kind {
 
-	case token.Identifier:
+	// the first rule in a simple statement is always an expression
+	// - parse simple statement on any of the possible first terminals in an expression
+	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, // atom
+		token.Bang, token.Minus, token.BitNegate: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
 
@@ -318,18 +289,33 @@ func (p *parser) Statement() (s ast.Statement) {
 
 	case token.OpenBrace:
 		s = p.BlockStmt()
+		p.separator("end of block stmt")
 
 	case token.If:
 		s = p.IfStmt()
+		p.separator("end of if stmt")
 
 	case token.For, token.While:
 		s = p.ForStmt()
+		p.separator("end of loop stmt")
 
 	case token.Eof:
+		// TODO: this happens a lot and is really uninformative when the parser breaks
+		// find a way to make debugging this case easier
+		ast.PrettyPrint(p.decls)
+		for _, err := range p.errors {
+			fmt.Println(err)
+		}
+		s = &ast.ErrStmt{}
 		panic("stmt at eof")
 
 	default:
-		s = p.ExprStmt()
+		ast.PrettyPrint(p.decls)
+		for _, err := range p.errors {
+			fmt.Println(err)
+		}
+		s = &ast.ErrStmt{}
+		panic("invalid token for statement start: " + p.peek().Kind.String())
 	}
 
 	return s
@@ -350,8 +336,7 @@ func (p *parser) SimpleStmt() ast.Statement {
 			Rhs: p.Expression(),
 		}
 	}
-	p.err("invalid token for simple stmt: %v", p.peek())
-	return nil // unreachable
+	return &ast.ExprStmt{Expr: lhs}
 }
 
 func (p *parser) ReturnStmt() *ast.ReturnStmt {
@@ -425,15 +410,12 @@ func (p *parser) StmtList() (stmts []ast.Statement) {
 	return stmts
 }
 
-func (p *parser) ExprStmt() ast.Statement {
-	return &ast.ExprStmt{Expr: p.Expression()}
-}
-
 // Declarations
 
 func (p *parser) Declaration() (d ast.Declaration) {
 	defer sync(func() {
 		d = &ast.ErrDecl{}
+		ast.PrettyPrint(p.decls)
 		p.skipTo(declStart)
 	})
 
@@ -445,9 +427,11 @@ func (p *parser) Declaration() (d ast.Declaration) {
 
 	case token.Func:
 		d = p.FuncDecl()
+		p.separator("end of func decl")
 
 	case token.Class:
 		d = p.ClassDecl()
+		p.separator("end of class decl")
 
 	default:
 		panic(fmt.Sprintf("%v not a declaration start", kind))
