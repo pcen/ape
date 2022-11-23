@@ -24,6 +24,7 @@ var (
 		token.Increment:  true,
 		token.Return:     true,
 		token.CloseParen: true,
+		token.CloseBrace: true,
 	}
 )
 
@@ -152,18 +153,30 @@ func (l *lexer) pick(b byte, match token.Kind, noMatch token.Kind) token.Token {
 	return l.NewToken(noMatch)
 }
 
+func (l *lexer) shouldInsertSemi(current byte) bool {
+	if current != 0 && current != '\n' {
+		return false
+	}
+	if len(l.tokens) == 0 {
+		return false // no previous token to check
+	}
+	return stmtEndTokens[l.tokens[len(l.tokens)-1].Kind]
+}
+
 func (l *lexer) skipWhiteSpace() bool {
 	for {
 		b, ok := l.next()
 		if !ok {
+			if l.shouldInsertSemi(b) {
+				l.tokens = append(l.tokens, l.NewToken(token.Sep))
+			}
 			return true
 		}
 		if !iswspace(b) {
 			l.back()
 			return false
 		}
-		// insert statement separator automatically
-		if b == '\n' && len(l.tokens) > 0 && stmtEndTokens[l.tokens[len(l.tokens)-1].Kind] {
+		if l.shouldInsertSemi(b) {
 			l.tokens = append(l.tokens, l.NewToken(token.Sep))
 		}
 	}
@@ -268,7 +281,7 @@ func (l *lexer) step() token.Token {
 		if l.match('=') {
 			return l.NewToken(token.MinusEq)
 		} else if l.match('-') {
-			l.NewToken(token.Decrement)
+			return l.NewToken(token.Decrement)
 		}
 		return l.NewToken(token.Minus)
 
@@ -294,16 +307,16 @@ func (l *lexer) step() token.Token {
 		return l.pick('=', token.GreaterEq, token.Greater)
 
 	case '&':
-		return l.NewToken(token.BitAnd)
+		return l.NewToken(token.Ampersand)
 
 	case '|':
-		return l.NewToken(token.BitOr)
+		return l.NewToken(token.Pipe)
 
 	case '~':
-		return l.NewToken(token.BitNegate)
+		return l.NewToken(token.Tilde)
 
 	case '^':
-		return l.NewToken(token.BitXOR)
+		return l.NewToken(token.Caret)
 
 	case '.':
 		return l.NewToken(token.Dot)

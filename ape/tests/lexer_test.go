@@ -12,6 +12,21 @@ func lex(source string) []token.Token {
 	return ape.NewLexer().LexString(source)
 }
 
+func tokensEqual(t1, t2 []token.Token) bool {
+	if t1 == nil {
+		return t2 == nil
+	}
+	if len(t1) != len(t2) {
+		return false
+	}
+	for i := range t1 {
+		if t1[i].Kind != t2[i].Kind || t1[i].Lexeme != t2[i].Lexeme {
+			return false
+		}
+	}
+	return true
+}
+
 func TestInsertStatementSeparators(t *testing.T) {
 	source := `
 	a += 2
@@ -48,5 +63,31 @@ func TestInsertStatementSeparators(t *testing.T) {
 		if tokens[i].Kind != tokens2[i].Kind {
 			t.Fatalf("missmatching tokens at index %v: expect %v got %v", i, tokens2[i], tokens[i])
 		}
+	}
+}
+
+func TestInsertAfterBrace(t *testing.T) {
+	source := `
+		class foo {
+
+		}
+		func bar() {
+
+		}
+	`
+	source2 := `
+		class foo {
+
+		}
+		func bar() {
+
+		}
+	`
+	tokens := lex(source)
+	tokens2 := lex(source2)
+	fmt.Println(tokens)
+	fmt.Println(tokens2)
+	if !tokensEqual(tokens, tokens2) {
+		t.Fatal("tokens are not equal")
 	}
 }

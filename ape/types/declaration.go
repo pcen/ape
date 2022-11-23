@@ -10,7 +10,7 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) (t Type) {
 	switch d := decl.(type) {
 	case *ast.TypedDecl:
 
-		declType, ok := c.Scope.LookupType(d.Type)
+		declType, ok := c.Scope.LookupType(d.Type.Name)
 		if !ok {
 			c.err(d.Ident.Position, "undefined type %v for %v", d.Type, d.Ident.Lexeme)
 		} else if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, declType); err != nil {
@@ -28,9 +28,9 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) (t Type) {
 		return
 
 	case *ast.FuncDecl:
-		retType, ok := c.Scope.LookupType(d.ReturnType.Lexeme)
+		retType, ok := c.Scope.LookupType(d.ReturnType.Name)
 		if !ok {
-			c.err(d.Name.Position, "undefined return type for %v: %v", d.Name.Lexeme, d.ReturnType.Lexeme)
+			c.err(d.Name.Position, "undefined return type for %v: %v", d.Name.Lexeme, d.ReturnType.Name)
 		}
 		fmt.Printf("%v returns type %v", d.Name, retType)
 		t = retType

@@ -2,8 +2,11 @@ package tests
 
 import (
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"testing"
 
+	"github.com/pcen/ape/ape"
 	"github.com/pcen/ape/ape/ast"
 )
 
@@ -54,4 +57,32 @@ func TestParsing(t *testing.T) {
 			fmt.Println(err)
 		}
 	}
+}
+
+func TestParsingFuzz(t *testing.T) {
+	fuzzDir := "../../tests/fuzz/"
+	filepath.WalkDir(fuzzDir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		if err != nil {
+			panic(err)
+		}
+		t.Run(d.Name(), func(t *testing.T) {
+			tokens := ape.NewLexer().LexFile(path)
+			parser := ape.NewParser(tokens)
+			f := parser.File()
+			fmt.Println("ast:")
+			ast.PrettyPrint(f.Ast)
+			errs, hasErrors := parser.Errors()
+			if hasErrors {
+				fmt.Println("\nerrors:")
+				for _, err := range errs {
+					fmt.Println(err)
+				}
+				t.Fatal("parser errors")
+			}
+		})
+		return nil
+	})
 }

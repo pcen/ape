@@ -13,7 +13,7 @@ type Declaration interface {
 // function parameters
 type ParamDecl struct {
 	Ident token.Token
-	Type  string
+	Type  *TypeExpr
 }
 
 func (d *ParamDecl) DeclStr() string {
@@ -23,18 +23,18 @@ func (d *ParamDecl) DeclStr() string {
 type TypedDecl struct {
 	Kind  token.Kind // val | var
 	Ident token.Token
-	Type  string
+	Type  *TypeExpr
 	Value Expression
 }
 
 func (d *TypedDecl) DeclStr() string {
-	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type, d.Value.ExprStr())
+	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type.ExprStr(), d.Value.ExprStr())
 }
 
 type FuncDecl struct {
 	Name       token.Token
 	Params     []*ParamDecl
-	ReturnType token.Token
+	ReturnType *TypeExpr
 	Body       *BlockStmt
 }
 
@@ -44,10 +44,20 @@ func (d *FuncDecl) DeclStr() string {
 
 type ClassDecl struct {
 	Name token.Token
+	Body []Declaration
 }
 
 func (d *ClassDecl) DeclStr() string {
 	return fmt.Sprintf("(decl class %v)", d.Name.Lexeme)
+}
+
+type MemberDecl struct {
+	Name token.Token
+	Type *TypeExpr
+}
+
+func (d *MemberDecl) DeclStr() string {
+	return fmt.Sprintf("(decl member %v %v)", d.Name, d.Type.ExprStr())
 }
 
 type ErrDecl struct {

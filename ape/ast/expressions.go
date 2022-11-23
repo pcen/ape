@@ -2,12 +2,26 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pcen/ape/ape/token"
 )
 
 type Expression interface {
 	ExprStr() string
+}
+
+func exprListStr(exprs []Expression) string {
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i, expr := range exprs {
+		sb.WriteString(expr.ExprStr())
+		if i != len(exprs)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
 
 type ErrExpr struct {
@@ -39,15 +53,15 @@ func NewLiteralExpr(token token.Token) Expression {
 }
 
 type IdentExpr struct {
-	token.Token
+	Ident token.Token
 }
 
 func (e *IdentExpr) ExprStr() string {
-	return fmt.Sprintf("%v", e.Token)
+	return fmt.Sprintf("%v", e.Ident)
 }
 
 func NewIdentExpr(token token.Token) *IdentExpr {
-	return &IdentExpr{Token: token}
+	return &IdentExpr{Ident: token}
 }
 
 type UnaryOp struct {
@@ -83,7 +97,7 @@ type CallExpr struct {
 }
 
 func (e *CallExpr) ExprStr() string {
-	return fmt.Sprintf("(%v() %v)", e.Callee.ExprStr(), e.Args)
+	return fmt.Sprintf("(%v() %v)", e.Callee.ExprStr(), exprListStr(e.Args))
 }
 
 type DotExpr struct {
@@ -92,7 +106,7 @@ type DotExpr struct {
 }
 
 func (e *DotExpr) ExprStr() string {
-	return fmt.Sprintf("(%v.%v)", e.Expr.ExprStr(), e.Field.Lexeme)
+	return fmt.Sprintf("(%v.%v)", e.Expr.ExprStr(), e.Field.ExprStr())
 }
 
 type IndexExpr struct {
@@ -102,4 +116,12 @@ type IndexExpr struct {
 
 func (e *IndexExpr) ExprStr() string {
 	return fmt.Sprintf("(%v[%v])", e.Expr.ExprStr(), e.Index.ExprStr())
+}
+
+type TypeExpr struct {
+	Name string
+}
+
+func (e *TypeExpr) ExprStr() string {
+	return e.Name
 }

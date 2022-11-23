@@ -1,4 +1,0 @@
-val bar int = 3 * 2
-val foo int = 5 + 4 - 3
-val zam bool = false
-return foo * bar

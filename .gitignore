@@ -2,6 +2,10 @@
 .DS_Store
 *.txt
 
+# grammar
+!grammar.txt
+!dist.txt
+
 # project
 build/
 bin/

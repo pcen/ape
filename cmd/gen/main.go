@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -13,15 +14,24 @@ import (
 
 /*
 	This file contains code to produce derivations of a given grammar. The
-	syntax used to specify grammars is based on PEG.
+	syntax used to specify grammars is based on PEG. How star expansion is
+	handled in derivations is determined by a config file specifying a rule
+	name followed by the distribution from which n is picked, where n is the
+	number of times to repeat rule*
 */
 
 // grammar descriptor grammar:
 // rule -> NAME "->" or End
 // or -> list ("|" list)*
 // list -> star*
-// star -> ref ?* | primitave ?* | literal ?* | group ?*
+// star -> ref "*"? | primitave "*"? | literal "*"? | group "*"?
 // group -> "(" or ")"
+
+// config file is a list of lines with the format:
+// rule: distribution
+// where distribution is one of the following:
+// u[x, y] uniform distribution from x to y
+// b[pct]  pct% chance n is 1, otherwise n is 0
 
 type parser struct {
 	lines [][]byte
@@ -51,17 +61,22 @@ func (r *rule) str() string {
 // sequence of pipe-separated grammar rules
 // of which one is used in derivation
 type or struct {
-	ors []*list
+	ors [][]*unary
 }
 
-func (o *or) pick() *list {
+func (o *or) pick() []*unary {
 	return o.ors[rand.Intn(len(o.ors))]
 }
 
 func (o *or) str() string {
 	var sb strings.Builder
 	for i, l := range o.ors {
-		sb.WriteString(l.str())
+		for j, u := range l {
+			sb.WriteString(u.str())
+			if j != len(l)-1 {
+				sb.WriteString(" ")
+			}
+		}
 		if i != len(o.ors)-1 {
 			sb.WriteString(" | ")
 		}
@@ -69,45 +84,44 @@ func (o *or) str() string {
 	return sb.String()
 }
 
-// a list of grammar rules that are applied sequentially
-type list struct {
-	stars []*star
+// a grammar rule followed by * or ?
+type unary struct {
+	n  node
+	op Kind
 }
 
-func (l *list) str() string {
-	var sb strings.Builder
-	for i, s := range l.stars {
-		sb.WriteString(s.str())
-		if i != len(l.stars)-1 {
-			sb.WriteString(" ")
+func (u *unary) expand(count int) []node {
+	switch u.op {
+	case None:
+		return []node{u.n}
+	case Star:
+		repeated := make([]node, count)
+		for i := range repeated {
+			repeated[i] = u.n
 		}
+		return repeated
+	case Question:
+		// TODO: also configure the chance of evaluating an optional rule
+		// but since these shouldn't blow up the way * can 50% should be ok
+		if CheckPct(50) {
+			return []node{u.n}
+		}
+		return []node{}
+	default:
+		panic("invalid operator for unary:" + u.op.String())
 	}
-	return sb.String()
 }
 
-// a grammar rule that can be applied 0 or more times
-type star struct {
-	n        node
-	repeated bool
-}
-
-func (s *star) expand(count int) []node {
-	if !s.repeated {
-		return []node{s.n}
+func (u *unary) str() string {
+	switch u.op {
+	case Star:
+		return fmt.Sprintf("%v*", u.n.str())
+	case Question:
+		return fmt.Sprintf("%v?", u.n.str())
+	case None:
+		return u.n.str()
 	}
-	repeated := make([]node, count)
-	for i := range repeated {
-		repeated[i] = s.n
-	}
-	return repeated
-}
-
-func (s *star) str() string {
-	if s.repeated {
-		return fmt.Sprintf("%v*", s.n.str())
-	} else {
-		return s.n.str()
-	}
+	panic("invalid operator for unary:" + u.op.String())
 }
 
 // groups a set of grammar rules in parentheses
@@ -151,10 +165,10 @@ func (l *literal) str() string {
 
 func (p *parser) Grammar() (rules []*rule) {
 	var l Lexer
-	for i, line := range p.lines {
-		fmt.Printf("parsing rule for line %v: %s\n", i+1, line)
+	for _, line := range p.lines {
 		p.toks = l.Lex(line)
-		fmt.Printf("\ttokens: %v\n", p.toks)
+		// fmt.Printf("parsing rule for line %v: %s\n", i+1, line)
+		// fmt.Printf("\ttokens: %v\n", p.toks)
 		p.pos = 0
 		rule := p.Rule()
 		rules = append(rules, rule)
@@ -173,9 +187,7 @@ func (p *parser) Rule() *rule {
 }
 
 func (p *parser) Or() *or {
-	o := &or{
-		ors: make([]*list, 0),
-	}
+	o := &or{ors: make([][]*unary, 0)}
 	o.ors = append(o.ors, p.List())
 	for p.match(Pipe) {
 		o.ors = append(o.ors, p.List())
@@ -183,32 +195,35 @@ func (p *parser) Or() *or {
 	return o
 }
 
-func (p *parser) List() *list {
-	l := &list{stars: make([]*star, 0)}
-	l.stars = append(l.stars, p.Star())
+func (p *parser) List() (list []*unary) {
+	list = append(list, p.Unary())
 	for p.peekIs(Ref, Primitave, Literal, Lparen) {
-		l.stars = append(l.stars, p.Star())
+		list = append(list, p.Unary())
 	}
-	return l
+	return list
 }
 
-func (p *parser) Star() *star {
-	s := &star{}
-
+func (p *parser) Unary() *unary {
+	u := &unary{}
 	switch p.peek().Kind {
 	case Ref:
-		s.n = p.Ref()
+		u.n = p.Ref()
 	case Primitave:
-		s.n = p.Primitave()
+		u.n = p.Primitave()
 	case Literal:
-		s.n = p.Literal()
+		u.n = p.Literal()
 	case Lparen:
-		s.n = p.Group()
+		u.n = p.Group()
 	}
-	if p.match(Star) {
-		s.repeated = true
+	switch {
+	case p.match(Star):
+		u.op = Star
+	case p.match(Question):
+		u.op = Question
+	default:
+		u.op = None
 	}
-	return s
+	return u
 }
 
 func (p *parser) Group() *group {
@@ -274,14 +289,16 @@ func (p *parser) consume(k Kind) {
 type Kind int
 
 const (
-	Ref Kind = iota + 1
+	None Kind = iota + 1
+	Ref
 	Primitave
 	Literal
-	Arrow
-	Lparen
-	Rparen
-	Pipe
-	Star
+	Arrow    // ->
+	Lparen   // (
+	Rparen   // )
+	Pipe     // |
+	Star     // *
+	Question // ?
 	Ws
 	End
 )
@@ -296,6 +313,7 @@ func (k Kind) String() string {
 		Rparen:    "<RPAREN>",
 		Pipe:      "<PIPE>",
 		Star:      "<STAR>",
+		Question:  "<QUESTION>",
 		Ws:        "<WS>",
 		End:       "<END>",
 	}[k]
@@ -307,6 +325,7 @@ var (
 		')': Rparen,
 		'|': Pipe,
 		'*': Star,
+		'?': Question,
 	}
 )
 
@@ -414,16 +433,14 @@ func (l *Lexer) ws() Token {
 
 func (l *Lexer) step() Token {
 	b := l.next()
-	if b == 0 {
+	switch {
+	case b == 0:
 		return Token{Kind: End}
-	}
-	if ws(b) {
+	case ws(b):
 		return l.ws()
-	}
-	if alpha(b) {
+	case alpha(b):
 		return l.word()
-	}
-	if b == '"' {
+	case b == '"':
 		return l.lit()
 	}
 	if b == '-' && l.pos < len(l.line) && l.line[l.pos] == '>' {
@@ -488,30 +505,35 @@ func NewGrammar(start string, rules []*rule, cfg *Config) *Grammar {
 
 /*
 eval is the recursive function that drives generating derivations
-  - need to be careful with how stars are expanded or stack will
-    overflow
-  - might fake tail recursion because go doesn't implement it but
-    could speed this up
-  - should optimize eval of nodes such as having or return a node that
-    is *list if there are multiple rules, but otherwise return the single
-    *star rule directly
-  - need to figure out how to properly weight * expansion to generate
-    good parser tests
+
+  - need to be careful with how stars are expanded or stack will overflow
+    since derivations are unbounded in size
+
+  - a config text file controls the behaviour of * expansion for given parent
+    rules
+
+  - * expansion handled well, but or selection leads to bad input ie. unary
+    repeatedly selects the option ( "!" | "-" | "~" ) unary leading to
+    unnecessary long chains of unary operators in test input
 */
 func (g *Grammar) eval(n node) {
 	// fmt.Printf("evaluating %v:%v\n", reflect.TypeOf(n), n.str())
 	// fmt.Printf("current buf: %s\n", g.buf)
 	switch n := n.(type) {
+
 	case *or:
-		g.eval(n.pick())
-	case *list:
-		for _, s := range n.stars {
-			g.eval(s)
+		for _, u := range n.pick() {
+			g.eval(u)
 		}
-	case *star:
-		count, ok := g.Cfg.Get(g.cur)
-		if !ok {
-			panic("no config for expanding * within " + g.cur)
+
+	case *unary:
+		count := 1
+		if n.op == Star {
+			var ok bool
+			count, ok = g.Cfg.Get(g.cur)
+			if !ok {
+				panic("no config for expanding * within " + g.cur)
+			}
 		}
 		expanded := n.expand(count)
 		for _, n := range expanded {
@@ -524,8 +546,13 @@ func (g *Grammar) eval(n node) {
 		if !ok {
 			panic("no rule in grammar for " + n.name)
 		}
+		// need to restore current rule name in case a list of rules
+		// is being traversed
+		prev := g.cur
 		g.cur = n.name
 		g.eval(rule)
+		g.cur = prev
+
 	case *primitave:
 		switch n.name {
 		case "IDENT":
@@ -541,8 +568,13 @@ func (g *Grammar) eval(n node) {
 		default:
 			panic("unknown primitave: " + n.name)
 		}
+
 	case *literal:
-		g.buf = append(g.buf, n.lexeme)
+		lex := n.lexeme
+		if n.lexeme == ";" {
+			lex += "\n"
+		}
+		g.buf = append(g.buf, lex)
 	}
 }
 
@@ -550,7 +582,6 @@ func (g *Grammar) Derive() string {
 	g.buf = make([]string, 0, 64)
 	start := g.Rules[g.Start]
 	g.cur = g.Start
-	fmt.Printf("start rule for derivation: %v\n", start.str())
 	g.eval(start)
 	g.buf = append(g.buf, "\n")
 	return strings.Join(g.buf, " ")
@@ -565,6 +596,10 @@ func (c *Config) Get(rule string) (int, bool) {
 		return f(), true
 	}
 	return 0, false
+}
+
+func CheckPct(pct int) bool {
+	return 1+rand.Intn(100) <= pct
 }
 
 func ReadConfig(file string) *Config {
@@ -587,7 +622,7 @@ func ReadConfig(file string) *Config {
 			var pct int
 			fmt.Sscanf(distStr, "b[%d]", &pct)
 			cfg.Dist[rule] = func() int {
-				if rand.Intn(100) <= pct {
+				if CheckPct(pct) {
 					return 1
 				}
 				return 0
@@ -597,39 +632,35 @@ func ReadConfig(file string) *Config {
 	return cfg
 }
 
-// func pct(p int) func() int {
-// 	return func() int {
-// 		if rand.Intn(100) <= p {
-// 			return 1
-// 		}
-// 		return 0
-// 	}
-// }
-
 func main() {
-	var out string
-	if len(os.Args) > 1 {
-		out = os.Args[1]
+	output := len(os.Args) > 2
+	var (
+		directory string
+		n         int64
+	)
+	if output {
+		directory = os.Args[1]
+		n, _ = strconv.ParseInt(os.Args[2], 10, 32)
 	}
+	start := time.Now()
 
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(start.UnixNano())
 
 	lines := ReadGrammarFile("./grammar.txt")
 	rules := NewParser(lines).Grammar()
 
 	cfg := ReadConfig("./dist.txt")
-	// for _, r := range rules {
-	// 	fmt.Println(r.str())
-	// }
 
 	g := NewGrammar("program", rules, cfg)
 
-	derivation := g.Derive()
-
-	if out != "" {
-		os.WriteFile(out, []byte(derivation), 0664)
+	if output {
+		for i := int64(0); i < n; i++ {
+			derivation := g.Derive()
+			os.WriteFile(fmt.Sprintf("%v/fuzz_%v_%v.ape", directory, start.Unix(), i), []byte(derivation), 0664)
+		}
+		fmt.Println("generated", n, "files in", directory)
+	} else {
+		derivation := g.Derive()
+		fmt.Printf("derivation:\n%v\n", derivation)
 	}
-
-	fmt.Println("derivation:")
-	fmt.Println(derivation)
 }
