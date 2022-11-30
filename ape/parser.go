@@ -50,7 +50,7 @@ func (p ParseError) String() string {
 }
 
 type Parser interface {
-	Demo() []ast.Declaration
+	Demo() []ast.Statement
 	File() *ast.File
 	Program() []ast.Declaration
 	Errors() ([]ParseError, bool)
@@ -144,12 +144,12 @@ func (p *parser) match(tk ...token.Kind) bool {
 	return false
 }
 
-func (p *parser) Demo() []ast.Declaration {
-	p.decls = make([]ast.Declaration, 0)
+func (p *parser) Demo() []ast.Statement {
+	stmts := make([]ast.Statement, 0)
 	for !p.match(token.Eof) {
-		p.decls = append(p.decls, p.Declaration())
+		stmts = append(stmts, p.Statement())
 	}
-	return p.decls
+	return stmts
 }
 
 func (p *parser) File() (file *ast.File) {

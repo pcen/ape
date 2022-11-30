@@ -1,43 +1,47 @@
-program      -> moduleDecl decl*
+program       -> moduleDecl decl*
 
-moduleDecl   -> "module" IDENT ";"
-decl         -> (typedDecl | funcDecl | classDecl) ";"
+moduleDecl    -> "module" IDENT ";"
+decl          -> (typedDecl | funcDecl | classDecl) ";"
 
-typedDecl    -> ("val" | "var") IDENT type  "=" expr
-funcDecl     -> "func" IDENT "(" parameters? ")" type blockStmt
+typedDecl     -> ("val" | "var") IDENT type  "=" expr
+funcDecl      -> "func" IDENT "(" parameters? ")" type blockStmt
 
-classDecl    -> "class" IDENT classBody
-classBody    -> "{" ( ( memberDecl | funcDecl ) ";" )* "}"
-memberDecl   -> IDENT type
+classDecl     -> "class" IDENT classBody
+classBody     -> "{" ( ( memberDecl | funcDecl ) ";" )* "}"
+memberDecl    -> IDENT type
 
-parameters   -> paramDecl ( "," paramDecl )*
-paramDecl    -> IDENT type
+parameters    -> paramDecl ( "," paramDecl )*
+paramDecl     -> IDENT type
 
-blockStmt    -> "{" stmtList "}"
-stmtList     -> (stmt ";") *
+blockStmt     -> "{" stmtList "}"
+stmtList      -> (stmt ";") *
 
-stmt         -> simpleStmt | compoundStmt
-simpleStmt   -> incStmt | assignment | expr
-incStmt      -> expr ("++" | "--")
-assignment   -> expr assignOp expr
-assignOp     -> "=" | "+=" | "*=" | "-=" | "/=" | "**="
+stmt          -> simpleStmt | compoundStmt | typedDeclStmt
 
-compoundStmt -> ifStmt | forStmt
+simpleStmt    -> incStmt | assignment | expr
+
+incStmt       -> expr ("++" | "--")
+assignment    -> expr assignOp expr
+assignOp      -> "=" | "+=" | "*=" | "-=" | "/=" | "**="
+
+compoundStmt  -> ifStmt | forStmt
 
 ifStmt        -> "if" condBlockStmt "else" blockStmt
 condBlockStmt -> equality blockStmt
 
-forStmt      -> "for" typedDecl ";" expr ";" simpleStmt blockStmt
+forStmt       -> "for" typedDecl ";" expr ";" simpleStmt blockStmt
 
-expr         -> equality
-equality     -> comparison ( ( "!=" | "==" ) comparison )*
-comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
-term         -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
-factor       -> unary ( ( "/" | "*" | "&" ) unary )*
-unary        -> ( "!" | "-" | "~" ) unary | primary
-primary      -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
-atom         -> NUMBER | STRING | IDENT | "true" | "false" | group
-group        -> "(" expr ")"
+typedDeclStmt -> typedDecl
 
-arguments    -> expr ( "," expr ) *
-type         -> IDENT | IDENT ( "." IDENT )*
+expr          -> equality
+equality      -> comparison ( ( "!=" | "==" ) comparison )*
+comparison    -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
+term          -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
+factor        -> unary ( ( "/" | "*" | "&" ) unary )*
+unary         -> ( "!" | "-" | "~" ) unary | primary
+primary       -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
+atom          -> NUMBER | STRING | IDENT | "true" | "false" | group
+group         -> "(" expr ")"
+
+arguments     -> expr ( "," expr ) *
+type          -> IDENT | IDENT ( "." IDENT )*
