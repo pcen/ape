@@ -50,6 +50,7 @@ func (p ParseError) String() string {
 }
 
 type Parser interface {
+	Demo() []ast.Declaration
 	File() *ast.File
 	Program() []ast.Declaration
 	Errors() ([]ParseError, bool)
@@ -69,6 +70,7 @@ func NewParser(tokens []token.Token) Parser {
 	}
 }
 
+// errors, hasErrors
 func (p *parser) Errors() ([]ParseError, bool) {
 	return p.errors, len(p.errors) > 0
 }
@@ -142,6 +144,14 @@ func (p *parser) match(tk ...token.Kind) bool {
 	return false
 }
 
+func (p *parser) Demo() []ast.Declaration {
+	p.decls = make([]ast.Declaration, 0)
+	for !p.match(token.Eof) {
+		p.decls = append(p.decls, p.Declaration())
+	}
+	return p.decls
+}
+
 func (p *parser) File() (file *ast.File) {
 	f := ast.NewFile("")
 	p.consume(token.Module, "module declaration")
@@ -195,8 +205,16 @@ func (p *parser) Unary() ast.Expression {
 	case token.Bang, token.Minus, token.Tilde:
 		return ast.NewUnaryOp(p.next().Kind, p.Unary())
 	default:
-		return p.Primary()
+		return p.Power()
 	}
+}
+
+func (p *parser) Power() ast.Expression {
+	base := p.Primary()
+	if p.match(token.Power) {
+		return ast.NewBinaryOp(base, token.Power, p.Power())
+	}
+	return base
 }
 
 // unary and binary operators work on primary expressions

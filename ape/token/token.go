@@ -21,9 +21,9 @@ const (
 	And // and
 	Or  // or
 
-	Type    // type
-	Class   // class
-	This    // this
+	Type  // type
+	Class // class
+	// This    // this
 	Func    // func
 	Public  // public
 	Private // private
@@ -108,9 +108,9 @@ var (
 		And: "and",
 		Or:  "or",
 
-		Type:    "type",
-		Class:   "class",
-		This:    "this",
+		Type:  "type",
+		Class: "class",
+		// This:    "this",
 		Func:    "func",
 		Public:  "public",
 		Private: "private",
@@ -175,19 +175,19 @@ var (
 	}
 
 	keywords = map[string]Kind{
-		"if":      If,
-		"elif":    Elif,
-		"else":    Else,
-		"for":     For,
-		"while":   While,
-		"break":   Break,
-		"switch":  Switch,
-		"case":    Case,
-		"and":     And,
-		"or":      Or,
-		"type":    Type,
-		"class":   Class,
-		"this":    This,
+		"if":     If,
+		"elif":   Elif,
+		"else":   Else,
+		"for":    For,
+		"while":  While,
+		"break":  Break,
+		"switch": Switch,
+		"case":   Case,
+		"and":    And,
+		"or":     Or,
+		"type":   Type,
+		"class":  Class,
+		// "this":    This,
 		"func":    Func,
 		"public":  Public,
 		"private": Private,

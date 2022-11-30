@@ -11,10 +11,14 @@ import (
 )
 
 var (
-	prog1 = `
+	parser_test1 = `
 	module test
 	class foobar {
-
+		Fiz string
+		Buz int
+		func Woof() {
+			println(this.Fiz, " says woof woof!")
+		}
 	}
 
 	var abc int = 100
@@ -47,7 +51,7 @@ var (
 )
 
 func TestParsing(t *testing.T) {
-	prog, errs := Parse(prog1)
+	prog, errs := Parse(parser_test1)
 	fmt.Println("module:", prog.Module)
 	fmt.Println("ast:")
 	ast.PrettyPrint(prog.Ast)
@@ -59,7 +63,7 @@ func TestParsing(t *testing.T) {
 	}
 }
 
-func TestParsingFuzz(t *testing.T) {
+func TestRandomParse(t *testing.T) {
 	fuzzDir := "../../tests/fuzz/"
 	filepath.WalkDir(fuzzDir, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {

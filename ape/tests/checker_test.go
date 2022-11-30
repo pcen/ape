@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/types"
 )
 
 const (
-	prog = `
+	prog1 = `
 		module test_module
 		class Foo {}
 		class Bar {}
@@ -28,11 +29,26 @@ const (
 
 		val pi float = 3.1415
 	`
+
+	prog3 = `
+		module test_module
+		var a int = 1
+		var b int = 2
+		var c int = a * b
+		var d float = c ** 2.5 ** 4
+
+		func foo(a float) int {
+			var b string = "jejeje"
+			return b
+		}
+
+		var e string = foo()
+	`
 )
 
 var (
 	progs = []string{
-		prog, prog2,
+		prog1, prog2, prog3,
 	}
 )
 
@@ -41,6 +57,7 @@ func TestChecker(t *testing.T) {
 		t.Run(fmt.Sprintf("program %v", i), func(t *testing.T) {
 			f, _ := Parse(prog)
 			c := types.NewChecker(f)
+			ast.PrettyPrint(f.Ast)
 
 			c.GatherModuleScope()
 			c.Scope.Print()

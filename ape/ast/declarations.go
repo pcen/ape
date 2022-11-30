@@ -60,8 +60,7 @@ func (d *MemberDecl) DeclStr() string {
 	return fmt.Sprintf("(decl member %v %v)", d.Name, d.Type.ExprStr())
 }
 
-type ErrDecl struct {
-}
+type ErrDecl struct{}
 
 func (d *ErrDecl) DeclStr() string {
 	return "err"
