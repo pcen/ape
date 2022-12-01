@@ -10,17 +10,16 @@ int main(int argc, char* argv[]) {
     }
 
     VM vm;
-
-    FILE* file;
-    file = fopen(argv[2], "r");
+    initVM(&vm);
+    
+    FILE* file = fopen(argv[1], "r");
 
     if (!file) {
-        printf("File not found: %s", argv[2]);
+        printf("File not found: %s", argv[1]);
         return -1;
     }
 
-
-
     interpret(&vm, file);
+    freeVM(&vm);
     return 0;
 }

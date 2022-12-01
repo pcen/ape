@@ -23,9 +23,13 @@ typedef struct {
     double locals[CONSTANT_POOL_MAX];
     double stack[STACK_MAX];    // Stack of values (everything is double rn)
     int stackPointer;   // Points to first open slot
-    uint8_t* ip;    // Points to the next instruction to be run
+    uint8_t* ip;    // Points to the start of instructions
+    int pc;         // Program counter
+
 } VM;
 
 void interpret(VM* vm, FILE* binary);
+void initVM(VM* vm);
+void freeVM(VM* vm);
 
 #endif

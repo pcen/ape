@@ -13,20 +13,24 @@ static void loadBytecode(VM* vm, FILE* binary) {
 
     uint32_t numConstants;
     fread(&numConstants, 4, 1, binary);
-    fseek(binary, 4, SEEK_SET); // Move 1 byte forward
+
+    fprintf(stderr, "CONSTANTS: %u\n", numConstants);
 
     uint32_t constant[numConstants];
     fread(&constant, 4, numConstants, binary);
     for (uint32_t i = 0; i < numConstants; i++) {
         vm->constants[i] = constant[i];
     }
-    fseek(binary, 4 * numConstants, SEEK_CUR);  // Now we're at opcode
 
+    fprintf(stderr, "0: %f\n", vm->constants[0]);
+    fprintf(stderr, "1: %f\n", vm->constants[1]);
+    
     // Dump the contents here
-    size_t opcodeSize = size - 4 - (numConstants * 4);
+    size_t opcodeSize = (size - 4 - (numConstants * 4)) + 1;
 
     vm->ip = malloc(opcodeSize * sizeof(uint8_t));
     fread(vm->ip, 1, opcodeSize, binary);
+    vm->ip[opcodeSize-1] = 0;
 
     fclose(binary);
 }
@@ -40,14 +44,13 @@ static void push(VM* vm, double value) {
 }
 
 static uint8_t readByte(VM* vm) {
-    return *(vm->ip++);
+    return vm->ip[vm->pc++];
 }
 
 static void run(VM* vm) {
-    while(true) {
-
-        uint8_t opcode = *(vm->ip++);
-
+    uint8_t opcode = vm->ip[vm->pc++];
+    while(opcode != 0) {
+        fprintf(stderr, "OP: %hhu\n", opcode);
         switch (opcode) {
         case OP_NIL:
             break;
@@ -91,11 +94,12 @@ static void run(VM* vm) {
             break;
         }
         case OP_PRINT:
-            printf("%f\n", pop(vm));
+            fprintf(stderr, "%f\n", pop(vm));
             break;
         default:
             exit(1);
         }
+        opcode = vm->ip[vm->pc++];
     }
 }
 
@@ -104,3 +108,11 @@ void interpret(VM* vm, FILE* binary) {
     run(vm);
 }
 
+void initVM(VM* vm) {
+    vm->stackPointer = 0;
+    vm->pc = 0;
+}
+
+void freeVM(VM* vm) {
+    free(vm->ip);
+}
