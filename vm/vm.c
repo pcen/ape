@@ -14,16 +14,11 @@ static void loadBytecode(VM* vm, FILE* binary) {
     uint32_t numConstants;
     fread(&numConstants, 4, 1, binary);
 
-    fprintf(stderr, "CONSTANTS: %u\n", numConstants);
-
     uint32_t constant[numConstants];
     fread(&constant, 4, numConstants, binary);
     for (uint32_t i = 0; i < numConstants; i++) {
         vm->constants[i] = constant[i];
     }
-
-    fprintf(stderr, "0: %f\n", vm->constants[0]);
-    fprintf(stderr, "1: %f\n", vm->constants[1]);
     
     // Dump the contents here
     size_t opcodeSize = (size - 4 - (numConstants * 4)) + 1;
@@ -50,7 +45,6 @@ static uint8_t readByte(VM* vm) {
 static void run(VM* vm) {
     uint8_t opcode = vm->ip[vm->pc++];
     while(opcode != 0) {
-        fprintf(stderr, "OP: %hhu\n", opcode);
         switch (opcode) {
         case OP_NIL:
             break;
@@ -94,7 +88,7 @@ static void run(VM* vm) {
             break;
         }
         case OP_PRINT:
-            fprintf(stderr, "%f\n", pop(vm));
+            printf("%f\n", pop(vm));
             break;
         default:
             exit(1);
