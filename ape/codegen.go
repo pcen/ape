@@ -2,6 +2,7 @@ package ape
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/op"
@@ -96,6 +97,14 @@ func (cg *codegen) expr(expr ast.Expression) {
 			cg.op(op.Divide)
 		default:
 			panic("invalid binary op: " + e.Op.String())
+		}
+
+	case *ast.CallExpr:
+		cg.gen(e.Args[0])
+		if ie, ok := e.Callee.(*ast.IdentExpr); ok && strings.Contains(ie.Ident.Lexeme, "print") {
+			cg.op(op.Print)
+		} else {
+			panic("call expr is not print")
 		}
 	}
 }
