@@ -1,9 +1,9 @@
-CC=gcc
-CFLAGS=-I.
+CXX=g++
+CXXFLAGS=-std=c++17 -I.
 OBJ=main.o vm.o
 
 all: $(OBJ)
-	$(CC) -o ape $(OBJ)
+	$(CXX) -o ape $(OBJ)
 
 clean:
 	rm $(OBJ)

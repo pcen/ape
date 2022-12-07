@@ -8,6 +8,10 @@ import (
 	"github.com/pcen/ape/ape"
 )
 
+var (
+	byteOrder = binary.LittleEndian
+)
+
 /*
  compiles demo scripts to bytecode
 */
@@ -45,7 +49,7 @@ func compile(script string) (string, error) {
 		lits[idx] = v
 	}
 
-	f, err := os.Create("./out.bin")
+	f, err := os.Create("./vm/out.bin")
 	if err != nil {
 		panic(err)
 	}
@@ -53,12 +57,12 @@ func compile(script string) (string, error) {
 
 	numLits := int32(len(lits))
 
-	binary.Write(f, binary.LittleEndian, numLits)
+	binary.Write(f, byteOrder, numLits)
 	for _, lit := range lits {
-		binary.Write(f, binary.LittleEndian, lit)
+		binary.Write(f, byteOrder, lit)
 	}
 	for _, oc := range code.Code {
-		binary.Write(f, binary.LittleEndian, byte(oc))
+		binary.Write(f, byteOrder, byte(oc))
 	}
 
 	return "", nil
