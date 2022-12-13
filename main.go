@@ -1,71 +1,55 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 
 	"github.com/pcen/ape/ape"
+	"github.com/pcen/ape/ape/c"
 )
 
-var (
-	byteOrder = binary.LittleEndian
+const (
+	output = "./ape.i"
 )
 
 /*
  compiles demo scripts to bytecode
 */
 
-func printMap[T comparable](m map[T]uint8) {
-	for k, v := range m {
-		fmt.Printf("%v: %v\n", k, v)
+func printMap[T comparable](m map[T]struct{}) {
+	for k := range m {
+		fmt.Printf("%v\n", k)
 	}
 }
 
 func compile(script string) (string, error) {
 	lexer := ape.NewLexer()
+	fmt.Println("lexing...")
 	tokens := lexer.LexFile(script)
+	fmt.Println("parsing...")
 	parser := ape.NewParser(tokens)
 	stmts := parser.Demo()
 	if errs, hasErrs := parser.Errors(); hasErrs {
 		return "", fmt.Errorf("parser error(s): %v", errs)
 	}
-	code := ape.GenerateCode(stmts)
+	fmt.Println("generating code...")
+	code := c.GenerateCode(stmts)
 
 	fmt.Println("identifiers:")
-	printMap(code.IdentIdx)
+	printMap(code.Idents)
 
-	fmt.Println("\nliterals:")
-	printMap(code.LitIdx)
+	src := code.Code.String()
+	fmt.Printf("src:\n%v\n", src)
 
-	fmt.Println("\nop codes:")
-
-	for _, op := range code.Code {
-		fmt.Println(op.String())
-	}
-
-	lits := make([]int32, len(code.LitIdx))
-	for v, idx := range code.LitIdx {
-		lits[idx] = v
-	}
-
-	f, err := os.Create("./vm/out.bin")
+	f, err := os.Create(output)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-
-	numLits := int32(len(lits))
-
-	binary.Write(f, byteOrder, numLits)
-	for _, lit := range lits {
-		binary.Write(f, byteOrder, lit)
-	}
-	for _, oc := range code.Code {
-		binary.Write(f, byteOrder, byte(oc))
-	}
-
-	return "", nil
+	io.WriteString(f, src)
+	return output, nil
 }
 
 func main() {
@@ -80,5 +64,5 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("compiled %v to %v\n", script, compiled)
-
+	exec.Command("gcc", "ape.i").Run()
 }

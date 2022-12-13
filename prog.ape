@@ -1,3 +1,7 @@
-var a int = 1
+var a int = -1
 var b int = a + 69
-print(b)
+if b >= 70 {
+	print(b)
+} else {
+	print(a)
+}

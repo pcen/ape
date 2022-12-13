@@ -1,6 +1,7 @@
 package ape
 
 import (
+	"fmt"
 	"os"
 	"unicode"
 
@@ -201,16 +202,20 @@ func (l *lexer) identifier() token.Token {
 
 func (l *lexer) number() token.Token {
 	start, end := l.idx, 0
+	negative := false
 	kind := token.Integer
 	for {
 		b, _ := l.next()
-		if !(isdigit(b) || b == '.' && kind == token.Integer) {
+		if !(isdigit(b) || b == '.' && kind == token.Integer || b == '-' && !negative) {
 			l.back()
 			end = l.idx
 			break
 		}
 		if b == '.' {
 			kind = token.Rational
+		}
+		if b == '-' {
+			negative = true
 		}
 	}
 	return l.NewLexemeToken(kind, string(l.buf[start:end]))
@@ -256,6 +261,7 @@ func (l *lexer) step() token.Token {
 		return l.identifier()
 	}
 	if isdigit(b) || (b == '-' && isdigit(l.peek())) {
+		fmt.Println("digit...")
 		// number
 		// TODO: parse 0x and b prefixed numbers
 		l.back()
