@@ -201,10 +201,11 @@ func (l *lexer) identifier() token.Token {
 
 func (l *lexer) number() token.Token {
 	start, end := l.idx, 0
+	negative := false
 	kind := token.Integer
 	for {
 		b, _ := l.next()
-		if !(isdigit(b) || b == '.' && kind == token.Integer) {
+		if !(isdigit(b) || b == '.' && kind == token.Integer || b == '-' && negative) {
 			l.back()
 			end = l.idx
 			break
@@ -212,6 +213,7 @@ func (l *lexer) number() token.Token {
 		if b == '.' {
 			kind = token.Rational
 		}
+		negative = b == '-'
 	}
 	return l.NewLexemeToken(kind, string(l.buf[start:end]))
 }
