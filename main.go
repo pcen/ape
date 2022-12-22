@@ -1,67 +1,42 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/pcen/ape/ape"
+	"github.com/pcen/ape/ape/c"
 )
 
 /*
- compiles demo scripts to bytecode
+ compiles demo script
 */
 
-func printMap[T comparable](m map[T]uint8) {
-	for k, v := range m {
-		fmt.Printf("%v: %v\n", k, v)
-	}
+func writeCode(path string, sb *strings.Builder) (string, error) {
+	base := filepath.Base(path)
+	suffix := filepath.Ext(base)
+	base = strings.TrimSuffix(base, suffix)
+	output := fmt.Sprintf("./out/%v.i", base)
+	return output, os.WriteFile(output, []byte(sb.String()), 0664)
 }
 
-func compile(script string) (string, error) {
+func compile(path string) (string, error) {
 	lexer := ape.NewLexer()
-	tokens := lexer.LexFile(script)
+	fmt.Println("lexing...")
+	tokens := lexer.LexFile(path)
+	fmt.Println("parsing...")
 	parser := ape.NewParser(tokens)
-	stmts := parser.Demo()
+	file := parser.File()
 	if errs, hasErrs := parser.Errors(); hasErrs {
 		return "", fmt.Errorf("parser error(s): %v", errs)
 	}
-	code := ape.GenerateCode(stmts)
+	fmt.Println("generating code...")
+	code := c.GenerateCode(file.Ast)
 
-	fmt.Println("identifiers:")
-	printMap(code.IdentIdx)
-
-	fmt.Println("\nliterals:")
-	printMap(code.LitIdx)
-
-	fmt.Println("\nop codes:")
-
-	for _, op := range code.Code {
-		fmt.Println(op.String())
-	}
-
-	lits := make([]int32, len(code.LitIdx))
-	for v, idx := range code.LitIdx {
-		lits[idx] = v
-	}
-
-	f, err := os.Create("./out.bin")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	numLits := int32(len(lits))
-
-	binary.Write(f, binary.LittleEndian, numLits)
-	for _, lit := range lits {
-		binary.Write(f, binary.LittleEndian, lit)
-	}
-	for _, oc := range code.Code {
-		binary.Write(f, binary.LittleEndian, byte(oc))
-	}
-
-	return "", nil
+	return writeCode(path, &code.Code)
 }
 
 func main() {
@@ -75,6 +50,9 @@ func main() {
 		fmt.Printf("error compiling %v: %v\n", script, err.Error())
 		os.Exit(1)
 	}
-	fmt.Printf("compiled %v to %v\n", script, compiled)
 
+	_, err = exec.Command("gcc", compiled, "-o", "bin").CombinedOutput()
+	if err != nil {
+		fmt.Printf("error compiling: %v\n", err.Error())
+	}
 }

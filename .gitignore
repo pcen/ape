@@ -1,6 +1,7 @@
 .vscode
 .DS_Store
 *.txt
+*.i
 
 # grammar
 !grammar.txt
@@ -10,6 +11,8 @@
 build/
 bin/
 install/
+out/
+./bin
 
 # c
 *.o
