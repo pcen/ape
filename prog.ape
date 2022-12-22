@@ -1,7 +1,17 @@
-var a int = -1
-var b int = a + 69
-if b >= 70 {
+module main
+
+func foo() {
+	var a int = -1
+	var b int = a * -100
+	if b >= 70 {
+		print(b)
+	} else {
+		print(a)
+	}
+	b = b ** 100
 	print(b)
-} else {
-	print(a)
+}
+
+func main() {
+	foo()
 }

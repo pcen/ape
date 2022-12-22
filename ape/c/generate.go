@@ -6,15 +6,15 @@ import (
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/token"
+	"github.com/pcen/ape/ape/types"
 )
 
-func GenerateCode(stmts []ast.Statement) *codegen {
+func GenerateCode(decls []ast.Declaration) *codegen {
 	// assume that each node is at least 2 opcodes
 	cg := newCodegen()
 	// forward declare printf
 	cg.write("int\tprintf(const char*, ...);\n")
-	cg.write("int main(int argc, char* argv[]) {\n")
-	cg.demo(stmts)
+	cg.program(decls)
 	cg.write("\n}\n")
 	return cg
 }
@@ -45,6 +45,10 @@ func (cg *codegen) expr(expr ast.Expression) {
 			cg.write("1")
 		case token.False:
 			cg.write("0")
+		case token.String:
+			cg.write(`"`)
+			cg.write(e.Lexeme)
+			cg.write(`"`)
 		default:
 			panic("cannot codegen for literal expr of type " + e.Kind.String())
 		}
@@ -65,13 +69,25 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.gen(e.Rhs)
 
 	case *ast.CallExpr:
-		cg.write(`printf("%d\n",`)
-		cg.gen(e.Args[0])
 		if ie, ok := e.Callee.(*ast.IdentExpr); ok && strings.Contains(ie.Ident.Lexeme, "print") {
+			cg.write(`printf("%d\n",`)
+			cg.gen(e.Args[0])
 			cg.write(")")
 		} else {
-			panic("call expr is not print")
+			cg.gen(e.Callee)
+			cg.args(e.Args)
 		}
+
+	case *ast.TypeExpr:
+		switch e.Name {
+		case types.String.String():
+			cg.write("char*")
+		default:
+			cg.write(e.Name)
+		}
+
+	default:
+		panic("cannot gen expr of type " + reflect.TypeOf(expr).String())
 	}
 }
 
@@ -117,11 +133,50 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 	}
 }
 
+func (cg *codegen) args(exprs []ast.Expression) {
+	cg.write("(")
+	for i, e := range exprs {
+		cg.gen(e)
+		if i != len(exprs)-1 {
+			cg.write(", ")
+		}
+	}
+	cg.write(")")
+}
+
+func (cg *codegen) params(decls []*ast.ParamDecl) {
+	cg.write("(")
+	for i, pd := range decls {
+		cg.write(pd.Type.Name + " " + pd.Ident.Lexeme)
+		if i != len(decls)-1 {
+			cg.write(", ")
+		}
+	}
+	cg.write(")")
+}
+
 func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
 	case *ast.TypedDecl:
-		cg.write("int " + d.Ident.Lexeme + " = ")
+		cg.expr(d.Type)
+		cg.write(" " + d.Ident.Lexeme + " = ")
 		cg.gen(d.Value)
+
+	case *ast.FuncDecl:
+		if d.Name.Lexeme == "main" {
+			cg.write("int main(int argc, char* argv[]) {\n")
+			cg.stmt(d.Body)
+		} else {
+			typ := "void"
+			if d.ReturnType != nil {
+				typ = d.ReturnType.Name
+			}
+			cg.write(typ + " " + d.Name.Lexeme)
+			cg.params(d.Params)
+			cg.write(" {\n")
+			cg.gen(d.Body)
+			cg.write("\n}\n")
+		}
 
 	default:
 		panic("cannot codegen decl: " + decl.DeclStr())
@@ -141,8 +196,8 @@ func (cg *codegen) gen(node ast.Node) {
 	}
 }
 
-func (cg *codegen) demo(stmts []ast.Statement) {
-	for _, s := range stmts {
-		cg.stmt(s)
+func (cg *codegen) program(decls []ast.Declaration) {
+	for _, d := range decls {
+		cg.decl(d)
 	}
 }

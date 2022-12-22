@@ -2,16 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/pcen/ape/ape"
 	"github.com/pcen/ape/ape/c"
-)
-
-const (
-	output = "./ape.i"
 )
 
 /*
@@ -24,32 +21,31 @@ func printMap[T comparable](m map[T]struct{}) {
 	}
 }
 
-func compile(script string) (string, error) {
+func writeCode(path string, sb *strings.Builder) (string, error) {
+	base := filepath.Base(path)
+	suffix := filepath.Ext(base)
+	base = strings.TrimSuffix(base, suffix)
+	output := fmt.Sprintf("./out/%v.i", base)
+	return output, os.WriteFile(output, []byte(sb.String()), 0664)
+}
+
+func compile(path string) (string, error) {
 	lexer := ape.NewLexer()
 	fmt.Println("lexing...")
-	tokens := lexer.LexFile(script)
+	tokens := lexer.LexFile(path)
 	fmt.Println("parsing...")
 	parser := ape.NewParser(tokens)
-	stmts := parser.Demo()
+	file := parser.File()
 	if errs, hasErrs := parser.Errors(); hasErrs {
 		return "", fmt.Errorf("parser error(s): %v", errs)
 	}
 	fmt.Println("generating code...")
-	code := c.GenerateCode(stmts)
+	code := c.GenerateCode(file.Ast)
 
 	fmt.Println("identifiers:")
 	printMap(code.Idents)
 
-	src := code.Code.String()
-	fmt.Printf("src:\n%v\n", src)
-
-	f, err := os.Create(output)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	io.WriteString(f, src)
-	return output, nil
+	return writeCode(path, &code.Code)
 }
 
 func main() {
@@ -63,6 +59,9 @@ func main() {
 		fmt.Printf("error compiling %v: %v\n", script, err.Error())
 		os.Exit(1)
 	}
-	fmt.Printf("compiled %v to %v\n", script, compiled)
-	exec.Command("gcc", "ape.i").Run()
+
+	_, err = exec.Command("gcc", compiled, "-o", "bin").CombinedOutput()
+	if err != nil {
+		fmt.Printf("error compiling: %v\n", err.Error())
+	}
 }
