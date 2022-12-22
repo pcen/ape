@@ -3,13 +3,11 @@ module main
 func foo() {
 	var a int = -1
 	var b int = a * -100
-	if b >= 70 {
+	if b > 0 {
 		print(b)
 	} else {
 		print(a)
 	}
-	b = b ** 100
-	print(b)
 }
 
 func main() {

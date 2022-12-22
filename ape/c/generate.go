@@ -20,14 +20,11 @@ func GenerateCode(decls []ast.Declaration) *codegen {
 }
 
 type codegen struct {
-	Code   strings.Builder
-	Idents map[string]struct{}
+	Code strings.Builder
 }
 
 func newCodegen() *codegen {
-	return &codegen{
-		Idents: make(map[string]struct{}),
-	}
+	return &codegen{}
 }
 
 func (cg *codegen) write(s string) {

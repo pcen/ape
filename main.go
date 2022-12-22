@@ -12,14 +12,8 @@ import (
 )
 
 /*
- compiles demo scripts to bytecode
+ compiles demo script
 */
-
-func printMap[T comparable](m map[T]struct{}) {
-	for k := range m {
-		fmt.Printf("%v\n", k)
-	}
-}
 
 func writeCode(path string, sb *strings.Builder) (string, error) {
 	base := filepath.Base(path)
@@ -41,9 +35,6 @@ func compile(path string) (string, error) {
 	}
 	fmt.Println("generating code...")
 	code := c.GenerateCode(file.Ast)
-
-	fmt.Println("identifiers:")
-	printMap(code.Idents)
 
 	return writeCode(path, &code.Code)
 }
