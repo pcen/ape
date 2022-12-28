@@ -63,6 +63,7 @@ func TestParsing(t *testing.T) {
 	}
 }
 
+// go test -run TestRandomParse ./ape/tests/*** -v
 func TestRandomParse(t *testing.T) {
 	fuzzDir := "../../tests/fuzz/"
 	filepath.WalkDir(fuzzDir, func(path string, d fs.DirEntry, err error) error {

@@ -1,6 +1,7 @@
 package c
 
 import (
+	"bytes"
 	"reflect"
 	"strings"
 
@@ -9,18 +10,21 @@ import (
 	"github.com/pcen/ape/ape/types"
 )
 
+var (
+	tab = []byte("\t")
+)
+
 func GenerateCode(decls []ast.Declaration) *codegen {
-	// assume that each node is at least 2 opcodes
 	cg := newCodegen()
 	// forward declare printf
-	cg.write("int\tprintf(const char*, ...);\n")
+	cg.write("int printf(const char*, ...);\n")
 	cg.program(decls)
-	cg.write("\n}\n")
 	return cg
 }
 
 type codegen struct {
-	Code strings.Builder
+	Code  strings.Builder
+	level int
 }
 
 func newCodegen() *codegen {
@@ -29,6 +33,22 @@ func newCodegen() *codegen {
 
 func (cg *codegen) write(s string) {
 	cg.Code.WriteString(s)
+}
+
+// start indented line
+func (cg *codegen) sil(s string) {
+	cg.indent()
+	cg.write(s)
+}
+
+func (cg *codegen) indent() {
+	cg.Code.Write(bytes.Repeat(tab, cg.level))
+}
+
+func (cg *codegen) indented(f func()) {
+	cg.level++
+	f()
+	cg.level--
 }
 
 func (cg *codegen) expr(expr ast.Expression) {
@@ -92,11 +112,9 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 	switch t := stmt.(type) {
 	case *ast.ExprStmt:
 		cg.expr(t.Expr)
-		cg.write(";\n")
 
 	case *ast.TypedDeclStmt:
 		cg.decl(t.Decl)
-		cg.write(";\n")
 
 	case *ast.AssignmentStmt:
 		cg.gen(t.Lhs)
@@ -105,24 +123,54 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 		if _, ok := t.Lhs.(*ast.IdentExpr); !ok {
 			panic("target of assignment must be identifier")
 		}
-		cg.write(";\n")
 
 	case *ast.IfStmt:
 		cg.write("if (")
 		cg.expr(t.If.Cond)
 		cg.write(") {\n")
-		cg.stmt(t.If.Body)
-		cg.write("}")
+		cg.indented(func() {
+			cg.stmt(t.If.Body)
+		})
+		cg.sil("}")
 		if t.Else != nil {
 			cg.write(" else {\n")
-			cg.stmt(t.Else)
+			cg.indented(func() {
+				cg.stmt(t.Else)
+			})
+			cg.indent()
 			cg.write("}")
 		}
-		cg.write("\n")
 
 	case *ast.BlockStmt:
 		for _, s := range t.Content {
+			cg.indent()
 			cg.stmt(s)
+			cg.write(";\n")
+		}
+
+	case *ast.ForStmt:
+		cg.write("for (")
+		if t.Init != nil {
+			cg.decl(t.Init)
+		}
+		cg.write("; ")
+		cg.expr(t.Cond)
+		cg.write("; ")
+		if t.Incr != nil {
+			cg.stmt(t.Incr)
+		}
+		cg.write(") {\n")
+		cg.indented(func() {
+			cg.stmt(t.Body)
+		})
+		cg.sil("}")
+
+	case *ast.IncStmt:
+		cg.expr(t.Expr)
+		if t.Op.Kind == token.Increment {
+			cg.write("++")
+		} else if t.Op.Kind == token.Decrement {
+			cg.write("--")
 		}
 
 	default:
@@ -160,9 +208,13 @@ func (cg *codegen) decl(decl ast.Declaration) {
 		cg.gen(d.Value)
 
 	case *ast.FuncDecl:
+		cg.write("\n")
 		if d.Name.Lexeme == "main" {
 			cg.write("int main(int argc, char* argv[]) {\n")
+			cg.level++
 			cg.stmt(d.Body)
+			cg.level--
+			cg.write("}\n")
 		} else {
 			typ := "void"
 			if d.ReturnType != nil {
@@ -171,8 +223,10 @@ func (cg *codegen) decl(decl ast.Declaration) {
 			cg.write(typ + " " + d.Name.Lexeme)
 			cg.params(d.Params)
 			cg.write(" {\n")
+			cg.level++
 			cg.gen(d.Body)
-			cg.write("\n}\n")
+			cg.level--
+			cg.write("}\n")
 		}
 
 	default:

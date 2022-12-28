@@ -4,10 +4,19 @@ func foo() {
 	var a int = -1
 	var b int = a * -100
 	if b > 0 {
+		b++
 		print(b)
 	} else {
 		print(a)
 	}
+	for var i int = 0; i < 10; i++ {
+		print(i)
+	}
+	print(a)
+	while a < 0 {
+		a++
+	}
+	print(a)
 }
 
 func main() {
