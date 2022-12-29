@@ -2,6 +2,7 @@ package c
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -16,17 +17,67 @@ var (
 
 const (
 	builtins = `int printf(const char*, ...);
-double pow(double x, double y);
+void* malloc(unsigned long);
+void* realloc(void*, unsigned long);
+double pow(double, double);
 void println(int i){printf("%d\n",i);}
 int ipow(int x, int y){return (int)pow((double)x, (double)y);}
 double dpow(double x, double y){return pow(x, y);}
 `
+
+	vec = `
+typedef struct %v {
+	%v *data;
+	int length;
+	int capacity;
+} %v;
+
+%v new_%v() {
+	%v v;
+	v.length = 0;
+	v.capacity = 4;
+	v.data = malloc(sizeof(%v) * v.capacity);
+	return v;
+}
+
+static void %v_resize(%v* this, int capacity) {
+	%v* data = realloc(this->data, sizeof(%v) * capacity);
+	this->data = data;
+	this->capacity = capacity;
+}
+
+void %v_push(%v* this, %v v) {
+	if (this->capacity == this->length) {
+		%v_resize(this, this->capacity * 2);
+	}
+	this->data[this->length++] = v;
+}
+
+void %v_set(%v* this, int i, %v v) {
+	if (i < 0) {
+		i += this->length;
+	}
+	this->data[i] = v;
+}
+
+%v %v_get(%v* this, int i) {
+	if (i < 0) {
+		i += this->length;
+	}
+	return this->data[i];
+}
+`
 )
+
+func vecImpl(n, t string) string {
+	return fmt.Sprintf(vec, n, t, n, n, n, n, t, n, n, t, t, n, n, t, n, n, n, t, t, n, n)
+}
 
 func GenerateCode(decls []ast.Declaration) *codegen {
 	cg := newCodegen()
 	// forward declare printf
 	cg.write(builtins)
+	cg.write(vecImpl("ivec", "int"))
 	cg.program(decls)
 	return cg
 }
