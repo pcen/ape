@@ -14,10 +14,19 @@ var (
 	tab = []byte("\t")
 )
 
+const (
+	builtins = `int printf(const char*, ...);
+double pow(double x, double y);
+void println(int i){printf("%d\n",i);}
+int ipow(int x, int y){return (int)pow((double)x, (double)y);}
+double dpow(double x, double y){return pow(x, y);}
+`
+)
+
 func GenerateCode(decls []ast.Declaration) *codegen {
 	cg := newCodegen()
 	// forward declare printf
-	cg.write("int printf(const char*, ...);\n")
+	cg.write(builtins)
 	cg.program(decls)
 	return cg
 }
@@ -52,6 +61,18 @@ func (cg *codegen) indented(f func()) {
 }
 
 func (cg *codegen) expr(expr ast.Expression) {
+	sepWithOpLiteral := func(lhs ast.Expression, op token.Kind, rhs ast.Expression) {
+		cg.gen(lhs)
+		cg.write(" " + op.String() + " ")
+		cg.gen(rhs)
+	}
+
+	sepWithString := func(lhs ast.Expression, op string, rhs ast.Expression) {
+		cg.gen(lhs)
+		cg.write(" " + op + " ")
+		cg.gen(rhs)
+	}
+
 	switch e := expr.(type) {
 
 	case *ast.LiteralExpr:
@@ -74,26 +95,51 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.write(e.Ident.Lexeme)
 
 	case *ast.BinaryOp:
-		cg.gen(e.Lhs)
 		switch e.Op {
 		case token.Plus, token.Minus, token.Star, token.Divide:
-			cg.write(" " + e.Op.String() + " ")
+			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
+
 		case token.Equal, token.NotEqual, token.Greater, token.GreaterEq, token.Less, token.LessEq:
+			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
+
+		case token.Power:
+			cg.write("ipow(")
+			cg.expr(e.Lhs)
+			cg.write(", ")
+			cg.expr(e.Rhs)
+			cg.write(")")
+
+		case token.And:
+			sepWithString(e.Lhs, "&&", e.Rhs)
+
+		case token.Or:
+			sepWithString(e.Lhs, "||", e.Rhs)
+
+		case token.ShiftLeft, token.ShiftRight:
+			cg.gen(e.Lhs)
 			cg.write(" " + e.Op.String() + " ")
+			cg.gen(e.Rhs)
+
+		case token.Ampersand:
+			// wrap in parenthesis since & is higher precidence than in c
+			cg.write("(")
+			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
+			cg.write(")")
+
 		default:
 			panic("invalid binary op: " + e.Op.String())
 		}
-		cg.gen(e.Rhs)
+
+	case *ast.UnaryOp:
+		switch e.Op {
+		case token.Minus, token.Bang, token.Tilde:
+			cg.write(e.Op.String())
+		}
+		cg.expr(e.Expr)
 
 	case *ast.CallExpr:
-		if ie, ok := e.Callee.(*ast.IdentExpr); ok && strings.Contains(ie.Ident.Lexeme, "print") {
-			cg.write(`printf("%d\n",`)
-			cg.gen(e.Args[0])
-			cg.write(")")
-		} else {
-			cg.gen(e.Callee)
-			cg.args(e.Args)
-		}
+		cg.gen(e.Callee)
+		cg.args(e.Args)
 
 	case *ast.TypeExpr:
 		switch e.Name {
@@ -204,8 +250,11 @@ func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
 	case *ast.TypedDecl:
 		cg.expr(d.Type)
-		cg.write(" " + d.Ident.Lexeme + " = ")
-		cg.gen(d.Value)
+		cg.write(" " + d.Ident.Lexeme)
+		if d.Value != nil {
+			cg.write(" = ")
+			cg.gen(d.Value)
+		}
 
 	case *ast.FuncDecl:
 		cg.write("\n")
@@ -243,7 +292,7 @@ func (cg *codegen) gen(node ast.Node) {
 	case ast.Expression:
 		cg.expr(n)
 	default:
-		panic("unknown interface type for ast.Node")
+		panic("unknown interface type for ast.Node" + reflect.TypeOf(node).String())
 	}
 }
 

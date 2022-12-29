@@ -28,7 +28,11 @@ type TypedDecl struct {
 }
 
 func (d *TypedDecl) DeclStr() string {
-	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type.ExprStr(), d.Value.ExprStr())
+	valueString := "<NONE>"
+	if d.Value != nil {
+		valueString = d.Value.ExprStr()
+	}
+	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type.ExprStr(), valueString)
 }
 
 type FuncDecl struct {

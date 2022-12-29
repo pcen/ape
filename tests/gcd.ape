@@ -1,0 +1,33 @@
+module tests
+
+func main() {
+	var u int = 2147483646
+	var v int = 125135235
+	var t int
+	var k int = 1
+
+	while u & 1 == 0 and v & 1 == 0 {
+		u = u >> 1
+		v = v >> 1
+		k = k << 1
+	}
+
+	if u & 1 == 1 {
+		t = -v
+	} else {
+		t = u
+	}
+
+	while t != 0 {
+		while t & 1 == 0 {
+			t = t >> 1
+		}
+		if t > 0 {
+			u = t
+		} else {
+			v = -t
+		}
+		t = u - v
+	}
+	println(u * k)
+}

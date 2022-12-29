@@ -173,7 +173,7 @@ func (p *parser) Program() []ast.Declaration {
 // Expressions
 
 func (p *parser) Expression() ast.Expression {
-	return p.Equality()
+	return p.Or()
 }
 
 func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...token.Kind) ast.Expression {
@@ -184,12 +184,24 @@ func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...to
 	return lhs
 }
 
+func (p *parser) Or() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.And, token.Or)
+}
+
+func (p *parser) And() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Equality, token.And)
+}
+
 func (p *parser) Equality() ast.Expression {
 	return p.leftAssociativeBinaryOp(p.Comparison, token.Equal, token.NotEqual)
 }
 
 func (p *parser) Comparison() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Term, token.Greater, token.GreaterEq, token.Less, token.LessEq)
+	return p.leftAssociativeBinaryOp(p.Shift, token.Greater, token.GreaterEq, token.Less, token.LessEq)
+}
+
+func (p *parser) Shift() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Term, token.ShiftLeft, token.ShiftRight)
 }
 
 func (p *parser) Term() ast.Expression {
@@ -418,10 +430,10 @@ func (p *parser) ForStmt() *ast.ForStmt {
 
 // TODO: when the last statement in a statement list is invalid,
 //
-//	Statement() skips the closing curly brace in attempt to
-//	find the next statement in the list, so the parser will
-//	consume the statements in the outer block. Figure out if
-//	handling this edge case is worth the complexity.
+// Statement() skips the closing curly brace in attempt to
+// find the next statement in the list, so the parser will
+// consume the statements in the outer block. Figure out if
+// handling this edge case is worth the complexity.
 func (p *parser) StmtList() (stmts []ast.Statement) {
 	for p.peek().Kind != token.CloseBrace {
 		stmts = append(stmts, p.Statement())

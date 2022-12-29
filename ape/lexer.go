@@ -303,9 +303,15 @@ func (l *lexer) step() token.Token {
 		return l.pick('=', token.NotEqual, token.Bang)
 
 	case '<':
+		if l.match('<') {
+			return l.NewToken(token.ShiftLeft)
+		}
 		return l.pick('=', token.LessEq, token.Less)
 
 	case '>':
+		if l.match('>') {
+			return l.NewToken(token.ShiftRight)
+		}
 		return l.pick('=', token.GreaterEq, token.Greater)
 
 	case '&':
