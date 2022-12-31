@@ -296,6 +296,9 @@ func (l *lexer) step() token.Token {
 		}
 		return l.pick('=', token.StarEq, token.Star)
 
+	case '%':
+		return l.pick('=', token.ModEq, token.Mod)
+
 	case '=':
 		return l.pick('=', token.Equal, token.Assign)
 

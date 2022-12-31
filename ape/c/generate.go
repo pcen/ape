@@ -167,15 +167,17 @@ func (cg *codegen) expr(expr ast.Expression) {
 			sepWithString(e.Lhs, "||", e.Rhs)
 
 		case token.ShiftLeft, token.ShiftRight:
-			cg.gen(e.Lhs)
-			cg.write(" " + e.Op.String() + " ")
-			cg.gen(e.Rhs)
+			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
 
 		case token.Ampersand:
 			// wrap in parenthesis since & is higher precidence than in c
 			cg.write("(")
 			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
 			cg.write(")")
+
+		case token.Mod:
+			// TODO: calculate actual modulus
+			sepWithString(e.Lhs, "%", e.Rhs)
 
 		default:
 			panic("invalid binary op: " + e.Op.String())
@@ -269,6 +271,9 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 		} else if t.Op.Kind == token.Decrement {
 			cg.write("--")
 		}
+
+	case *ast.BreakStmt:
+		cg.write("break")
 
 	default:
 		panic("cannot gen for statement " + reflect.TypeOf(stmt).String())

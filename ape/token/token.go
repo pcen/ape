@@ -50,6 +50,8 @@ const (
 	StarEq   // *=
 	Power    // **
 	PowerEq  // **=
+	Mod      // %
+	ModEq    // %=
 	Assign   // =
 
 	// comparison
@@ -140,6 +142,8 @@ var (
 		StarEq:   "*=",
 		Power:    "**",
 		PowerEq:  "**=",
+		Mod:      "%%",
+		ModEq:    "%%=",
 		Assign:   "=",
 
 		Equal:     "==",

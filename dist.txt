@@ -13,8 +13,11 @@ parameters: u[0, 5]
 
 stmtList: u[2, 20]
 
+or: b[15]
+and: b[15]
 equality: b[10]
 comparison: b[10]
+shift: b[10]
 term: b[10]
 factor: b[10]
 primary: b[30]

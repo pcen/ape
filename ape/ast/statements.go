@@ -100,10 +100,32 @@ func (s *IncStmt) StmtStr() string {
 
 type AssignmentStmt struct {
 	Lhs Expression
-	Op  token.Token
 	Rhs Expression
 }
 
+var assignmentToBinaryOp = map[token.Kind]token.Kind{
+	token.PlusEq:   token.Plus,
+	token.MinusEq:  token.Minus,
+	token.StarEq:   token.Star,
+	token.DivideEq: token.Divide,
+	token.PowerEq:  token.Power,
+	token.ModEq:    token.Mod,
+}
+
+func NewAssignmentStmt(lhs Expression, op token.Kind, rhs Expression) *AssignmentStmt {
+	if op != token.Assign {
+		op = assignmentToBinaryOp[op]
+		rhs = &BinaryOp{Lhs: lhs, Op: op, Rhs: rhs}
+	}
+	return &AssignmentStmt{Lhs: lhs, Rhs: rhs}
+}
+
 func (s *AssignmentStmt) StmtStr() string {
-	return fmt.Sprintf("(%v %v %v)", s.Op, s.Lhs.ExprStr(), s.Rhs.ExprStr())
+	return fmt.Sprintf("(assign %v %v)", s.Lhs.ExprStr(), s.Rhs.ExprStr())
+}
+
+type BreakStmt struct{}
+
+func (s *BreakStmt) StmtStr() string {
+	return "break"
 }

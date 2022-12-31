@@ -209,7 +209,7 @@ func (p *parser) Term() ast.Expression {
 }
 
 func (p *parser) Factor() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.Ampersand)
+	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.Mod, token.Ampersand)
 }
 
 func (p *parser) Unary() ast.Expression {
@@ -318,6 +318,11 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = p.ReturnStmt()
 		p.separator("return stmt")
 
+	case token.Break:
+		p.next()
+		s = &ast.BreakStmt{}
+		p.separator("break stmt")
+
 	case token.OpenBrace:
 		s = p.BlockStmt()
 		p.separator("end of block stmt")
@@ -360,13 +365,10 @@ func (p *parser) SimpleStmt() ast.Statement {
 			Op:   p.prev(),
 		}
 	}
-	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq) {
-		return &ast.AssignmentStmt{
-			Lhs: lhs,
-			Op:  p.prev(),
-			Rhs: p.Expression(),
-		}
+	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq, token.ModEq) {
+		return ast.NewAssignmentStmt(lhs, p.prev().Kind, p.Expression())
 	}
+
 	return &ast.ExprStmt{Expr: lhs}
 }
 
