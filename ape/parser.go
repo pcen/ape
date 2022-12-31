@@ -272,6 +272,8 @@ func (p *parser) Atom() ast.Expression {
 		return ast.NewIdentExpr(p.next())
 	case token.OpenParen:
 		return p.GroupExpr()
+	case token.OpenBrack:
+		return p.LitList()
 	default:
 		p.err("invalid token for expression: %v", p.peek())
 		return nil // err unwinds stack
@@ -283,6 +285,13 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 	expr = p.Expression()
 	p.consume(token.CloseParen, "end of group expr")
 	return &ast.GroupExpr{Expr: expr}
+}
+
+func (p *parser) LitList() ast.Expression {
+	p.consume(token.OpenBrack, "start of list literal")
+	elements := p.Arguments()
+	p.consume(token.CloseBrack, "end of list literal")
+	return &ast.LitListExpr{Elements: elements}
 }
 
 // Statements
@@ -568,6 +577,11 @@ func (p *parser) MemberDecl() *ast.MemberDecl {
 // Miscellaneous
 
 func (p *parser) Type() *ast.TypeExpr {
+	list := false
+	if p.match(token.OpenBrack) && p.match(token.CloseBrack) {
+		list = true
+	}
+
 	p.consume(token.Identifier, "type name")
 	lexemes := make([]string, 0, 1)
 	lexemes = append(lexemes, p.prev().Lexeme)
@@ -577,5 +591,5 @@ func (p *parser) Type() *ast.TypeExpr {
 		p.consume(token.Identifier, "imported type name")
 		lexemes = append(lexemes, p.prev().Lexeme)
 	}
-	return &ast.TypeExpr{Name: strings.Join(lexemes, ".")}
+	return &ast.TypeExpr{Name: strings.Join(lexemes, "."), List: list}
 }

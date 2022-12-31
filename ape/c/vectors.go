@@ -2,16 +2,49 @@ package c
 
 import "fmt"
 
-func declareVector(name, ctype string) string {
-	format := `typedef struct %v {
+const vec = `
+typedef struct %v {
 	%v *data;
 	int length;
 	int capacity;
 } %v;
-`
-	return fmt.Sprintf(format, name, ctype, name)
+
+%v new_%v() {
+	%v v;
+	v.length = 0;
+	v.capacity = 4;
+	v.data = malloc(sizeof(%v) * v.capacity);
+	return v;
 }
 
-func implementVector(name, ctype string) {
+static void %v_resize(%v* this, int capacity) {
+	%v* data = realloc(this->data, sizeof(%v) * capacity);
+	this->data = data;
+	this->capacity = capacity;
+}
 
+void %v_push(%v* this, %v v) {
+	if (this->capacity == this->length) {
+		%v_resize(this, this->capacity * 2);
+	}
+	this->data[this->length++] = v;
+}
+
+void %v_set(%v* this, int i, %v v) {
+	if (i < 0) {
+		i += this->length;
+	}
+	this->data[i] = v;
+}
+
+%v %v_get(%v* this, int i) {
+	if (i < 0) {
+		i += this->length;
+	}
+	return this->data[i];
+}
+`
+
+func implementVector(name, ctype string) string {
+	return fmt.Sprintf(vec, name, ctype, name, name, name, name, ctype, name, name, ctype, ctype, name, name, ctype, name, name, name, ctype, ctype, name, name)
 }

@@ -1,0 +1,11 @@
+module tests
+
+func main() {
+	var a []int
+	a.push(1)
+	a.push(2)
+	a.push(3)
+	for var i int = 0; i < 3; i++ {
+		println(a[i])
+	}
+}

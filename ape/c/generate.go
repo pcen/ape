@@ -2,7 +2,6 @@ package c
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -24,60 +23,16 @@ void println(int i){printf("%d\n",i);}
 int ipow(int x, int y){return (int)pow((double)x, (double)y);}
 double dpow(double x, double y){return pow(x, y);}
 `
-
-	vec = `
-typedef struct %v {
-	%v *data;
-	int length;
-	int capacity;
-} %v;
-
-%v new_%v() {
-	%v v;
-	v.length = 0;
-	v.capacity = 4;
-	v.data = malloc(sizeof(%v) * v.capacity);
-	return v;
-}
-
-static void %v_resize(%v* this, int capacity) {
-	%v* data = realloc(this->data, sizeof(%v) * capacity);
-	this->data = data;
-	this->capacity = capacity;
-}
-
-void %v_push(%v* this, %v v) {
-	if (this->capacity == this->length) {
-		%v_resize(this, this->capacity * 2);
-	}
-	this->data[this->length++] = v;
-}
-
-void %v_set(%v* this, int i, %v v) {
-	if (i < 0) {
-		i += this->length;
-	}
-	this->data[i] = v;
-}
-
-%v %v_get(%v* this, int i) {
-	if (i < 0) {
-		i += this->length;
-	}
-	return this->data[i];
-}
-`
 )
 
-func vecImpl(n, t string) string {
-	return fmt.Sprintf(vec, n, t, n, n, n, n, t, n, n, t, t, n, n, t, n, n, n, t, t, n, n)
-}
+const (
+	ivecTypeName = "ape_ivec"
+)
 
 func GenerateCode(decls []ast.Declaration) *codegen {
 	cg := newCodegen()
-	// forward declare printf
 	cg.write(builtins)
-	cg.write(vecImpl("ivec", "int"))
+	cg.write(implementVector(ivecTypeName, "int"))
 	cg.program(decls)
 	return cg
 }
@@ -109,6 +64,39 @@ func (cg *codegen) indented(f func()) {
 	cg.level++
 	f()
 	cg.level--
+}
+
+func (cg *codegen) receiverArgs(receiver ast.Expression, exprs ...ast.Expression) {
+	cg.write("(&")
+	cg.expr(receiver)
+	if len(exprs) > 0 {
+		cg.write(", ")
+	}
+	for i, e := range exprs {
+		cg.gen(e)
+		if i != len(exprs)-1 {
+			cg.write(", ")
+		}
+	}
+	cg.write(")")
+}
+
+func (cg *codegen) method(dot *ast.DotExpr, call *ast.CallExpr) {
+	// assume method for now
+	if dot.Field.Ident.Lexeme == "push" {
+		dot.Field.Ident.Lexeme = "ape_ivec_push"
+	}
+	cg.gen(dot.Field)
+	cg.receiverArgs(dot.Expr, call.Args...)
+}
+
+func (cg *codegen) index(receiver ast.Expression, index ast.Expression) {
+	// TODO: the function used here depends on the type of the expression
+	// - for lists use ape_<ctype>vec_get
+	// - for maps use ape_<ctype>map_get
+	// etc...
+	cg.write("ape_ivec_get")
+	cg.receiverArgs(receiver, index)
 }
 
 func (cg *codegen) expr(expr ast.Expression) {
@@ -191,10 +179,27 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.expr(e.Expr)
 
 	case *ast.CallExpr:
-		cg.gen(e.Callee)
-		cg.args(e.Args)
+		// check for method call
+		if dot, ok := e.Callee.(*ast.DotExpr); ok {
+			cg.method(dot, e)
+		} else {
+			cg.expr(e.Callee)
+			cg.args(e.Args)
+		}
+
+	case *ast.DotExpr:
+		cg.expr(e.Expr)
+		cg.write(".")
+		cg.expr(e.Field)
+
+	case *ast.IndexExpr:
+		cg.index(e.Expr, e.Index)
 
 	case *ast.TypeExpr:
+		if e.List {
+			cg.write(ivecTypeName)
+			break
+		}
 		switch e.Name {
 		case types.String.String():
 			cg.write("char*")

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/c"
 )
 
@@ -30,6 +31,7 @@ func utilCompile(path string) (string, error) {
 	parseStart := time.Now()
 	parser := NewParser(tokens)
 	file := parser.File()
+	ast.PrettyPrint(file.Ast)
 	parseDur := time.Since(parseStart)
 	if errs, hasErrs := parser.Errors(); hasErrs {
 		return "", fmt.Errorf("parser error(s): %v", errs)

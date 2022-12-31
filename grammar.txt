@@ -43,8 +43,9 @@ term          -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
 factor        -> unary ( ( "/" | "*" | "&" | "%" ) unary )*
 unary         -> ( "!" | "-" | "~" ) unary | primary
 primary       -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
-atom          -> NUMBER | STRING | IDENT | "true" | "false" | group
+atom          -> NUMBER | STRING | IDENT | "true" | "false" | group | litlist
 group         -> "(" expr ")"
+litlist       -> "[" arguments? "]"
 
 arguments     -> expr ( "," expr ) *
 type          -> IDENT | IDENT ( "." IDENT )*
