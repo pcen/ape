@@ -34,6 +34,7 @@ func (c *Checker) err(pos token.Position, format string, a ...interface{}) {
 type Checker struct {
 	Scope      *Scope
 	scopeStack []*Scope
+	Types      map[ast.Expression]Type
 	File       *ast.File
 	Errors     []checkerError
 }
@@ -43,6 +44,7 @@ func NewChecker(File *ast.File) *Checker {
 	return &Checker{
 		Scope:      moduleScope,
 		scopeStack: []*Scope{moduleScope},
+		Types:      make(map[ast.Expression]Type),
 		File:       File,
 	}
 }
@@ -54,7 +56,7 @@ func (c *Checker) pushScope() {
 }
 
 func (c *Checker) popScope() {
-	if len(c.scopeStack) <= 2 {
+	if len(c.scopeStack) <= 1 {
 		panic("cannot pop module scope from scope stack")
 	}
 	c.scopeStack = c.scopeStack[:len(c.scopeStack)-1]
@@ -80,7 +82,16 @@ func (c *Checker) GatherModuleScope() {
 	}
 
 	for _, d := range filter[*ast.FuncDecl](c.File.Ast) {
-		if err := c.Scope.DeclareSymbol(d.Name.Lexeme, Func); err != nil {
+		var returns Type
+		var ok bool
+		returns, ok = Void, true
+		if d.ReturnType != nil {
+			returns, ok = c.Scope.LookupType(d.ReturnType.Name)
+		}
+		if !ok {
+			fmt.Println("unknown return type for ", d.Name.Lexeme)
+		}
+		if err := c.Scope.DeclareSymbol(d.Name.Lexeme, NewFunctionType(returns)); err != nil {
 			c.err(d.Name.Position, err.Error())
 		}
 	}
@@ -94,10 +105,11 @@ func (c *Checker) GatherModuleScope() {
 			c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, d.Type.Name, exprType.String())
 		}
 	}
+
 }
 
-func (c *Checker) Check() {
-	// c.GatherModuleScope()
+func (c *Checker) Check() Environment {
+	c.GatherModuleScope()
 	for _, decl := range c.File.Ast {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
@@ -105,4 +117,8 @@ func (c *Checker) Check() {
 			c.CheckStatement(d.Body)
 		}
 	}
+	for _, e := range c.Errors {
+		fmt.Println(e)
+	}
+	return Environment{Expressions: c.Types}
 }

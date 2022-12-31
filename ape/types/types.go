@@ -1,6 +1,10 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pcen/ape/ape/ast"
+)
 
 type PrimitaveType uint
 
@@ -8,9 +12,14 @@ type Type interface {
 	String() string
 }
 
+type Environment struct {
+	Expressions map[ast.Expression]Type
+}
+
 const (
 	Invalid PrimitaveType = iota + 1
 	Undefined
+	Void
 	Int
 	Int8
 	Int16
@@ -26,8 +35,6 @@ const (
 	Double
 	Char
 	String
-
-	Func
 )
 
 var (
@@ -54,7 +61,7 @@ type NamedType struct {
 	name string
 }
 
-func NewNamedType(name string) NamedType {
+func NewNamedType(name string) Type {
 	return NamedType{name: name}
 }
 
@@ -66,7 +73,7 @@ type Function struct {
 	Ret Type
 }
 
-func NewFunctionType(returns Type) Function {
+func NewFunctionType(returns Type) Type {
 	return Function{Ret: returns}
 }
 
@@ -74,17 +81,36 @@ func (f Function) String() string {
 	return fmt.Sprintf("func %v", f.Ret)
 }
 
+type List struct {
+	Type
+}
+
+func NewListType(t Type) Type {
+	return List{Type: t}
+}
+
+// lists
+var (
+	IntList = NewListType(Int)
+)
+
+func (l List) String() string {
+	return fmt.Sprintf("list %v", l.Type)
+}
+
 // assert all types implement Type interface
 var (
 	_ Type = Invalid
 	_ Type = NamedType{}
 	_ Type = Function{}
+	_ Type = List{}
 )
 
 var (
 	typeNames = []string{
 		Invalid:   "<INVALID TYPE>",
 		Undefined: "<UNDEFINED TYPE>",
+		Void:      "<VOID>",
 		Int:       "int",
 		Int8:      "int8",
 		Int16:     "int16",
@@ -136,9 +162,12 @@ func Same(t1, t2 Type) bool {
 			return t1 == t2
 		}
 	case NamedType:
-		fmt.Println("named")
 		if t2, ok := t2.(NamedType); ok {
 			return t1.name == t2.name
+		}
+	case List:
+		if t2, ok := t2.(List); ok {
+			return Same(t1.Type, t2.Type)
 		}
 	}
 	return false

@@ -10,6 +10,7 @@ import (
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/c"
+	"github.com/pcen/ape/ape/types"
 )
 
 func utilWriteCode(path string, sb *strings.Builder) (string, error) {
@@ -36,9 +37,13 @@ func utilCompile(path string) (string, error) {
 	if errs, hasErrs := parser.Errors(); hasErrs {
 		return "", fmt.Errorf("parser error(s): %v", errs)
 	}
+
+	checker := types.NewChecker(file)
+	env := checker.Check()
+
 	fmt.Println("generating code...")
 	genStart := time.Now()
-	code := c.GenerateCode(file.Ast)
+	code := c.GenerateCode(file.Ast, env)
 	genDur := time.Since(genStart)
 
 	fmt.Printf("lex: %v\nparse: %v\ngen: %v\n", lexDur.Microseconds(), parseDur.Microseconds(), genDur.Microseconds())

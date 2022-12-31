@@ -27,10 +27,10 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		}
 
 	case *ast.GroupExpr:
-		return c.CheckExpr(e.Expr)
+		t = c.CheckExpr(e.Expr)
 
 	case *ast.UnaryOp:
-		return c.CheckExpr(e.Expr)
+		t = c.CheckExpr(e.Expr)
 
 	case *ast.BinaryOp:
 		t1 := c.CheckExpr(e.Lhs)
@@ -47,10 +47,32 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		}
 		t = typ
 
+	case *ast.CallExpr:
+		t = c.CheckExpr(e.Callee)
+		for _, arg := range e.Args {
+			c.CheckExpr(arg)
+		}
+
+	case *ast.DotExpr:
+		et := c.CheckExpr(e.Expr)
+		switch et.(type) {
+		case List:
+			if e.Field.Ident.Lexeme == "push" {
+				t = NewFunctionType(Void)
+			}
+		default:
+			fmt.Println("WARNING: unknown receiver type in dot expression")
+			t = c.CheckExpr(e.Field)
+		}
+
+	case *ast.IndexExpr:
+		t = c.CheckExpr(e.Expr)
+		c.CheckExpr(e.Index)
+
 	default:
 		panic(fmt.Sprintf("cannot type check expressions of type %v", reflect.TypeOf(expr)))
 	}
 
-	fmt.Printf("%v has type %v\n", expr.ExprStr(), t)
+	c.Types[expr] = t
 	return t
 }

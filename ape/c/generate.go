@@ -2,6 +2,7 @@ package c
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -25,25 +26,34 @@ double dpow(double x, double y){return pow(x, y);}
 `
 )
 
-const (
-	ivecTypeName = "ape_ivec"
+var (
+	listImplementations = map[types.Type]string{
+		types.IntList: "ape_ivec",
+	}
 )
 
-func GenerateCode(decls []ast.Declaration) *codegen {
-	cg := newCodegen()
+var (
+	indexFunctions = map[types.Type]string{
+		types.IntList: "ape_ivec_get",
+	}
+)
+
+func GenerateCode(decls []ast.Declaration, env types.Environment) *codegen {
+	cg := newCodegen(env)
 	cg.write(builtins)
-	cg.write(implementVector(ivecTypeName, "int"))
+	cg.write(implementVector(listImplementations[types.IntList], "int"))
 	cg.program(decls)
 	return cg
 }
 
 type codegen struct {
 	Code  strings.Builder
+	Env   types.Environment
 	level int
 }
 
-func newCodegen() *codegen {
-	return &codegen{}
+func newCodegen(env types.Environment) *codegen {
+	return &codegen{Env: env}
 }
 
 func (cg *codegen) write(s string) {
@@ -95,6 +105,8 @@ func (cg *codegen) index(receiver ast.Expression, index ast.Expression) {
 	// - for lists use ape_<ctype>vec_get
 	// - for maps use ape_<ctype>map_get
 	// etc...
+	fmt.Println("cg index of type ", cg.Env.Expressions[receiver])
+	fmt.Println(receiver.ExprStr(), reflect.TypeOf(receiver))
 	cg.write("ape_ivec_get")
 	cg.receiverArgs(receiver, index)
 }
@@ -181,6 +193,7 @@ func (cg *codegen) expr(expr ast.Expression) {
 	case *ast.CallExpr:
 		// check for method call
 		if dot, ok := e.Callee.(*ast.DotExpr); ok {
+			fmt.Printf("callee is dot field from type %v\n", cg.Env.Expressions[dot.Expr])
 			cg.method(dot, e)
 		} else {
 			cg.expr(e.Callee)
@@ -196,8 +209,8 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.index(e.Expr, e.Index)
 
 	case *ast.TypeExpr:
-		if e.List {
-			cg.write(ivecTypeName)
+		if t, ok := cg.Env.Expressions[expr].(types.List); ok {
+			cg.write(listImplementations[t])
 			break
 		}
 		switch e.Name {
