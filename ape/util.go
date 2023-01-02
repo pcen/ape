@@ -27,6 +27,7 @@ func utilCompile(path string) (string, error) {
 	lexer := NewLexer()
 	tokens := lexer.LexFile(path)
 	lexDur := time.Since(lexStart)
+	fmt.Println(tokens)
 
 	fmt.Println("parsing...")
 	parseStart := time.Now()

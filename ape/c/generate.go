@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/pcen/ape/ape/ast"
@@ -27,21 +28,38 @@ double dpow(double x, double y){return pow(x, y);}
 )
 
 var (
-	listImplementations = map[types.Type]string{
+	vectorImplementations = map[types.Type]string{
 		types.IntList:    "ape_ivec",
 		types.StringList: "ape_svec",
 	}
 )
 
 func emptyVectorInitializerFunctionCall(t types.Type) string {
-	return fmt.Sprint("new_", listImplementations[t], "()")
+	return fmt.Sprint("new_", vectorImplementations[t], "()")
+}
+
+func indexVectorFunction(t types.Type) (string, bool) {
+	name, ok := vectorImplementations[t]
+	if !ok {
+		return "", false
+	}
+	return fmt.Sprint(name, "_get"), true
+
+}
+
+func newVectorLiteralFunction(t types.Type) (string, bool) {
+	name, ok := vectorImplementations[t]
+	if !ok {
+		return "", false
+	}
+	return fmt.Sprint(name, "_literal"), true
 }
 
 func GenerateCode(decls []ast.Declaration, env types.Environment) *codegen {
 	cg := newCodegen(env)
 	cg.write(builtins)
-	cg.write(implementVector(listImplementations[types.IntList], "int"))
-	cg.write(implementVector(listImplementations[types.StringList], "char*"))
+	cg.write(implementVector(vectorImplementations[types.IntList], "int"))
+	cg.write(implementVector(vectorImplementations[types.StringList], "char*"))
 	cg.program(decls)
 	return cg
 }
@@ -112,9 +130,11 @@ func (cg *codegen) index(receiver ast.Expression, index ast.Expression) {
 	// - for lists use ape_<ctype>vec_get
 	// - for maps use ape_<ctype>map_get
 	// etc...
-	fmt.Println("cg index of type ", cg.Env.Expressions[receiver])
-	fmt.Println(receiver.ExprStr(), reflect.TypeOf(receiver))
-	cg.write("ape_ivec_get")
+	if f, ok := indexVectorFunction(cg.TypeOf(receiver)); ok {
+		cg.write(f)
+	} else {
+		panic("cannot generate receiver function for " + receiver.ExprStr())
+	}
 	cg.receiverArgs(receiver, index)
 }
 
@@ -219,16 +239,16 @@ func (cg *codegen) expr(expr ast.Expression) {
 			if t, ok := cg.Env.Expressions[expr]; ok {
 				switch {
 				case t.Is(types.IntList):
-					cg.write(listImplementations[t])
+					cg.write(vectorImplementations[t])
 				case t.Is(types.StringList):
-					cg.write(listImplementations[t])
+					cg.write(vectorImplementations[t])
 				}
 			}
 			break
 		}
 
 		if t, ok := cg.Env.Expressions[expr].(types.List); ok {
-			cg.write(listImplementations[t])
+			cg.write(vectorImplementations[t])
 			break
 		}
 		switch e.Name {
@@ -237,6 +257,30 @@ func (cg *codegen) expr(expr ast.Expression) {
 		default:
 			cg.write(e.Name)
 		}
+
+	case *ast.LitListExpr:
+		tinterface := cg.TypeOf(e)
+		fmt.Println(tinterface.String())
+		_, ok := tinterface.(types.List)
+		if !ok {
+			panic("literal list expr does not have list type")
+		}
+		f, ok := newVectorLiteralFunction(tinterface)
+		if !ok {
+			panic("no function for vector literal of type " + tinterface.String())
+		}
+		cg.write(f)
+		length := strconv.FormatInt(int64(len(e.Elements)), 10)
+		cg.write(fmt.Sprintf("((%v[%v]){", "int", length))
+		for i, el := range e.Elements {
+			cg.expr(el)
+			if i != len(e.Elements)-1 {
+				cg.write(", ")
+			}
+		}
+		cg.write("}, ")
+		cg.write(length)
+		cg.write(")")
 
 	default:
 		panic("cannot gen expr of type " + reflect.TypeOf(expr).String())
@@ -371,8 +415,10 @@ func (cg *codegen) decl(decl ast.Declaration) {
 			cg.write("int main(int c_argc, char* c_argv[]) {\n")
 			cg.level++
 			cg.indent()
-			cg.decl(d.Params[0])
-			cg.write(";\n")
+			cg.write("ape_svec argv = ape_svec_literal(c_argv, c_argc);\n")
+			// cg.decl(d.Params[0])
+			// cg.write(";\n")
+			// cg.write("\tfor (int _i = 0; _i < c_argc; _i++) {\n\t\tape_svec_push(&argv, c_argv[_i]);\n\t}\n")
 			cg.stmt(d.Body)
 			cg.level--
 			cg.write("}\n")

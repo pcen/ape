@@ -1,11 +1,10 @@
 module tests
 
 func main(argv []string) {
-	var a []int
-	a.push(1)
-	a.push(2)
-	a.push(3)
-	for var i int = 0; i < 3; i++ {
-		println(a[i])
+	var a []int = [2, 3, 5, 7]
+	var sum int = 1
+	for var i int = 0; i < 4; i++ {
+		sum *= a[i]
 	}
+	println(sum)
 }

@@ -12,6 +12,7 @@ build/
 bin/
 install/
 out/
+spike/
 bin
 
 # c

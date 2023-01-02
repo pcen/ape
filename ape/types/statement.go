@@ -36,6 +36,13 @@ func (c *Checker) CheckStatement(stmt ast.Statement) {
 			panic("cannot increment non-integer type")
 		}
 
+	case *ast.AssignmentStmt:
+		l := c.CheckExpr(s.Lhs)
+		r := c.CheckExpr(s.Rhs)
+		if !r.Is(l) {
+			panic("type missmatch in assignment statement")
+		}
+
 	default:
 		panic("cannot check statement " + s.StmtStr() + ", " + reflect.TypeOf(stmt).String())
 	}

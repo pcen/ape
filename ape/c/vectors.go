@@ -4,7 +4,7 @@ import "fmt"
 
 const vec = `
 typedef struct %v {
-	%v *data;
+	%v* data;
 	int length;
 	int capacity;
 } %v;
@@ -43,8 +43,16 @@ void %v_set(%v* this, int i, %v v) {
 	}
 	return this->data[i];
 }
+
+%v %v_literal(%v* data, int n) {
+	%v this = new_%v();
+	for (int i = 0; i < n; i++) {
+		%v_set(&this, i, data[i]);
+	}
+	return this;
+}
 `
 
 func implementVector(name, ctype string) string {
-	return fmt.Sprintf(vec, name, ctype, name, name, name, name, ctype, name, name, ctype, ctype, name, name, ctype, name, name, name, ctype, ctype, name, name)
+	return fmt.Sprintf(vec, name, ctype, name, name, name, name, ctype, name, name, ctype, ctype, name, name, ctype, name, name, name, ctype, ctype, name, name, name, name, ctype, name, name, name)
 }

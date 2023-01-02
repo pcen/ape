@@ -25,6 +25,7 @@ var (
 		token.Return:     true,
 		token.CloseParen: true,
 		token.CloseBrace: true,
+		token.CloseBrack: true,
 	}
 )
 
