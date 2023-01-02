@@ -1,6 +1,6 @@
 module tests
 
-func main() {
+func main(argv []string) {
 	var a []int
 	a.push(1)
 	a.push(2)

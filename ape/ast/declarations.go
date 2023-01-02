@@ -12,17 +12,17 @@ type Declaration interface {
 
 // function parameters
 type ParamDecl struct {
-	Ident token.Token
+	Ident *IdentExpr
 	Type  *TypeExpr
 }
 
 func (d *ParamDecl) DeclStr() string {
-	return fmt.Sprintf("%v %v", d.Ident.Lexeme, d.Type)
+	return fmt.Sprintf("%v %v", d.Ident.ExprStr(), d.Type)
 }
 
 type TypedDecl struct {
-	Kind  token.Kind // val | var
-	Ident token.Token
+	Kind  token.Kind  // val | var
+	Ident token.Token // TODO: are not sure if IdentExpr is a good idea, but should be consistent
 	Type  *TypeExpr
 	Value Expression
 }

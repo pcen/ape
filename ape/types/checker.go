@@ -91,7 +91,7 @@ func (c *Checker) GatherModuleScope() {
 		if !ok {
 			fmt.Println("unknown return type for ", d.Name.Lexeme)
 		}
-		if err := c.Scope.DeclareSymbol(d.Name.Lexeme, NewFunctionType(returns)); err != nil {
+		if err := c.Scope.DeclareSymbol(d.Name.Lexeme, NewFunction(nil, []Type{returns})); err != nil {
 			c.err(d.Name.Position, err.Error())
 		}
 	}
@@ -101,7 +101,7 @@ func (c *Checker) GatherModuleScope() {
 			c.err(d.Ident.Position, "unknown type in declaration of %v, %v", d.Ident.Lexeme, d.Type)
 		} else if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, typ); err != nil {
 			c.err(d.Ident.Position, err.Error())
-		} else if exprType := c.CheckExpr(d.Value); !Same(typ, exprType) {
+		} else if exprType := c.CheckExpr(d.Value); !typ.Is(exprType) {
 			c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, d.Type.Name, exprType.String())
 		}
 	}
@@ -114,7 +114,7 @@ func (c *Checker) Check() Environment {
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
 			fmt.Println("type checking func", d.Name.Lexeme)
-			c.CheckStatement(d.Body)
+			c.CheckDeclaration(d)
 		}
 	}
 	for _, e := range c.Errors {

@@ -496,7 +496,7 @@ func (p *parser) ParamList() (decls []*ast.ParamDecl) {
 func (p *parser) ParamDecl() *ast.ParamDecl {
 	decl := &ast.ParamDecl{}
 	if p.match(token.Identifier) {
-		decl.Ident = p.prev()
+		decl.Ident = &ast.IdentExpr{Ident: p.prev()}
 	}
 	decl.Type = p.Type()
 	return decl

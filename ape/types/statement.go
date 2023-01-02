@@ -29,8 +29,12 @@ func (c *Checker) CheckStatement(stmt ast.Statement) {
 		c.popScope()
 
 	case *ast.IncStmt:
-		c.CheckExpr(s.Expr)
-		// TODO: make sure type can be incremented
+		typ := c.CheckExpr(s.Expr)
+		if !typ.Is(Int) {
+			// TODO: all integer types can be incremented, not just int
+			// c allows ++/-- on floats too
+			panic("cannot increment non-integer type")
+		}
 
 	default:
 		panic("cannot check statement " + s.StmtStr() + ", " + reflect.TypeOf(stmt).String())

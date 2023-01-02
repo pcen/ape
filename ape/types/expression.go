@@ -35,7 +35,7 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 	case *ast.BinaryOp:
 		t1 := c.CheckExpr(e.Lhs)
 		t2 := c.CheckExpr(e.Rhs)
-		if !Same(t1, t2) {
+		if t1.Is(t2) {
 			c.err(token.Position{}, "invalid types for binary op: %v %v %v", t1, e.Op, t2)
 		}
 		t = t1
@@ -55,10 +55,11 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 
 	case *ast.DotExpr:
 		et := c.CheckExpr(e.Expr)
+		// the type of Field depends on the type of the receiver
 		switch et.(type) {
 		case List:
 			if e.Field.Ident.Lexeme == "push" {
-				t = NewFunctionType(Void)
+				t = NewFunction(nil, nil)
 			}
 		default:
 			fmt.Println("WARNING: unknown receiver type in dot expression")

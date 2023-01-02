@@ -28,20 +28,20 @@ double dpow(double x, double y){return pow(x, y);}
 
 var (
 	listImplementations = map[types.Type]string{
-		types.IntList: "ape_ivec",
+		types.IntList:    "ape_ivec",
+		types.StringList: "ape_svec",
 	}
 )
 
-var (
-	indexFunctions = map[types.Type]string{
-		types.IntList: "ape_ivec_get",
-	}
-)
+func emptyVectorInitializerFunctionCall(t types.Type) string {
+	return fmt.Sprint("new_", listImplementations[t], "()")
+}
 
 func GenerateCode(decls []ast.Declaration, env types.Environment) *codegen {
 	cg := newCodegen(env)
 	cg.write(builtins)
 	cg.write(implementVector(listImplementations[types.IntList], "int"))
+	cg.write(implementVector(listImplementations[types.StringList], "char*"))
 	cg.program(decls)
 	return cg
 }
@@ -50,6 +50,13 @@ type codegen struct {
 	Code  strings.Builder
 	Env   types.Environment
 	level int
+}
+
+func (cg *codegen) TypeOf(expr ast.Expression) types.Type {
+	if t, ok := cg.Env.Expressions[expr]; ok {
+		return t
+	}
+	panic("codegen: type of " + expr.ExprStr() + " is unknown")
 }
 
 func newCodegen(env types.Environment) *codegen {
@@ -193,7 +200,6 @@ func (cg *codegen) expr(expr ast.Expression) {
 	case *ast.CallExpr:
 		// check for method call
 		if dot, ok := e.Callee.(*ast.DotExpr); ok {
-			fmt.Printf("callee is dot field from type %v\n", cg.Env.Expressions[dot.Expr])
 			cg.method(dot, e)
 		} else {
 			cg.expr(e.Callee)
@@ -209,6 +215,18 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.index(e.Expr, e.Index)
 
 	case *ast.TypeExpr:
+		if e.List {
+			if t, ok := cg.Env.Expressions[expr]; ok {
+				switch {
+				case t.Is(types.IntList):
+					cg.write(listImplementations[t])
+				case t.Is(types.StringList):
+					cg.write(listImplementations[t])
+				}
+			}
+			break
+		}
+
 		if t, ok := cg.Env.Expressions[expr].(types.List); ok {
 			cg.write(listImplementations[t])
 			break
@@ -312,7 +330,8 @@ func (cg *codegen) args(exprs []ast.Expression) {
 func (cg *codegen) params(decls []*ast.ParamDecl) {
 	cg.write("(")
 	for i, pd := range decls {
-		cg.write(pd.Type.Name + " " + pd.Ident.Lexeme)
+		cg.write(pd.Type.Name + " ")
+		cg.expr(pd.Ident)
 		if i != len(decls)-1 {
 			cg.write(", ")
 		}
@@ -320,21 +339,40 @@ func (cg *codegen) params(decls []*ast.ParamDecl) {
 	cg.write(")")
 }
 
+func (cg *codegen) variableDecl(typ *ast.TypeExpr, ident token.Token, expr ast.Expression) {
+	cg.expr(typ)
+	cg.write(" ")
+	cg.write(ident.Lexeme)
+	if expr != nil {
+		cg.write(" = ")
+		cg.gen(expr)
+	} else {
+		t := cg.TypeOf(typ)
+		if _, ok := t.(types.List); ok {
+			cg.write(" = ")
+			cg.write(emptyVectorInitializerFunctionCall(t))
+		}
+	}
+
+}
+
 func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
 	case *ast.TypedDecl:
-		cg.expr(d.Type)
-		cg.write(" " + d.Ident.Lexeme)
-		if d.Value != nil {
-			cg.write(" = ")
-			cg.gen(d.Value)
-		}
+		cg.variableDecl(d.Type, d.Ident, d.Value)
+
+	case *ast.ParamDecl:
+		// TODO: this is a hack, they should be generated as regular c function parameters
+		cg.variableDecl(d.Type, d.Ident.Ident, nil)
 
 	case *ast.FuncDecl:
 		cg.write("\n")
 		if d.Name.Lexeme == "main" {
-			cg.write("int main(int argc, char* argv[]) {\n")
+			cg.write("int main(int c_argc, char* c_argv[]) {\n")
 			cg.level++
+			cg.indent()
+			cg.decl(d.Params[0])
+			cg.write(";\n")
 			cg.stmt(d.Body)
 			cg.level--
 			cg.write("}\n")
