@@ -289,7 +289,14 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 
 func (p *parser) LitList() ast.Expression {
 	p.consume(token.OpenBrack, "start of list literal")
-	elements := p.Arguments()
+	// need to abstract function for comma separated list of expressions
+	var elements []ast.Expression
+	for !p.peekIs(token.CloseBrack) {
+		elements = append(elements, p.Expression())
+		if !p.peekIs(token.CloseBrack) {
+			p.consume(token.Comma, "list literal elements must be comma separated")
+		}
+	}
 	p.consume(token.CloseBrack, "end of list literal")
 	return &ast.LitListExpr{Elements: elements}
 }
@@ -314,7 +321,10 @@ func (p *parser) Statement() (s ast.Statement) {
 
 	// the first rule in a simple statement is always an expression
 	// - parse simple statement on any of the possible first terminals in an expression
-	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, // atom
+	// - unfortunately, since a simple statement can be an expression, this includes list
+	//   literals. we could prevent literals here, which would be simple to parse but would
+	//   technically complicate the grammar
+	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, token.OpenBrack, // atom
 		token.Bang, token.Minus, token.Tilde: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")

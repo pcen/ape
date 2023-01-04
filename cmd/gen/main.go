@@ -349,9 +349,7 @@ func (l *Lexer) next() byte {
 }
 
 func (l *Lexer) back() {
-	if l.pos != len(l.line) {
-		l.pos--
-	}
+	l.pos--
 }
 
 func (l *Lexer) peek() byte {

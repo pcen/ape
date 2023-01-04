@@ -5,22 +5,22 @@
 # b[pct]  - n = 1 with pct% chance, else 0
 
 
-program: u[10, 30]
+program: u[10, 20]
 
-classBody: u[0, 10]
+classBody: u[0, 5]
 
 parameters: u[0, 5]
 
-stmtList: u[2, 20]
+stmtList: u[0, 1]
 
-or: b[15]
-and: b[15]
-equality: b[10]
-comparison: b[10]
-shift: b[10]
-term: b[10]
-factor: b[10]
-primary: b[30]
+or: b[10]
+and: b[10]
+equality: b[5]
+comparison: b[5]
+shift: b[5]
+term: b[5]
+factor: b[5]
+primary: b[20]
 
 arguments: u[0, 5]
 type: u[0, 2]
