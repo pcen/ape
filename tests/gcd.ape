@@ -1,0 +1,26 @@
+module tests
+
+func main() {
+	var u int = 2147483646
+	var v int = 125135235
+
+	if u < 0 {
+		u = -u
+	}
+	if v < 0 {
+		v = -v
+	}
+	if v != 0 {
+		while true {
+			u %= v
+			if u == 0 {
+				break
+			}
+			v %= u
+			if v == 0 {
+				break
+			}
+		}
+	}
+	println(u + v)
+}

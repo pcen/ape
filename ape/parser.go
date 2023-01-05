@@ -173,7 +173,7 @@ func (p *parser) Program() []ast.Declaration {
 // Expressions
 
 func (p *parser) Expression() ast.Expression {
-	return p.Equality()
+	return p.Or()
 }
 
 func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...token.Kind) ast.Expression {
@@ -184,12 +184,24 @@ func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...to
 	return lhs
 }
 
+func (p *parser) Or() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.And, token.Or)
+}
+
+func (p *parser) And() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Equality, token.And)
+}
+
 func (p *parser) Equality() ast.Expression {
 	return p.leftAssociativeBinaryOp(p.Comparison, token.Equal, token.NotEqual)
 }
 
 func (p *parser) Comparison() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Term, token.Greater, token.GreaterEq, token.Less, token.LessEq)
+	return p.leftAssociativeBinaryOp(p.Shift, token.Greater, token.GreaterEq, token.Less, token.LessEq)
+}
+
+func (p *parser) Shift() ast.Expression {
+	return p.leftAssociativeBinaryOp(p.Term, token.ShiftLeft, token.ShiftRight)
 }
 
 func (p *parser) Term() ast.Expression {
@@ -197,7 +209,7 @@ func (p *parser) Term() ast.Expression {
 }
 
 func (p *parser) Factor() ast.Expression {
-	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.Ampersand)
+	return p.leftAssociativeBinaryOp(p.Unary, token.Divide, token.Star, token.Mod, token.Ampersand)
 }
 
 func (p *parser) Unary() ast.Expression {
@@ -260,6 +272,8 @@ func (p *parser) Atom() ast.Expression {
 		return ast.NewIdentExpr(p.next())
 	case token.OpenParen:
 		return p.GroupExpr()
+	case token.OpenBrack:
+		return p.LitList()
 	default:
 		p.err("invalid token for expression: %v", p.peek())
 		return nil // err unwinds stack
@@ -271,6 +285,20 @@ func (p *parser) GroupExpr() (expr ast.Expression) {
 	expr = p.Expression()
 	p.consume(token.CloseParen, "end of group expr")
 	return &ast.GroupExpr{Expr: expr}
+}
+
+func (p *parser) LitList() ast.Expression {
+	p.consume(token.OpenBrack, "start of list literal")
+	// need to abstract function for comma separated list of expressions
+	var elements []ast.Expression
+	for !p.peekIs(token.CloseBrack) {
+		elements = append(elements, p.Expression())
+		if !p.peekIs(token.CloseBrack) {
+			p.consume(token.Comma, "list literal elements must be comma separated")
+		}
+	}
+	p.consume(token.CloseBrack, "end of list literal")
+	return &ast.LitListExpr{Elements: elements}
 }
 
 // Statements
@@ -293,7 +321,10 @@ func (p *parser) Statement() (s ast.Statement) {
 
 	// the first rule in a simple statement is always an expression
 	// - parse simple statement on any of the possible first terminals in an expression
-	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, // atom
+	// - unfortunately, since a simple statement can be an expression, this includes list
+	//   literals. we could prevent literals here, which would be simple to parse but would
+	//   technically complicate the grammar
+	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, token.OpenBrack, // atom
 		token.Bang, token.Minus, token.Tilde: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
@@ -305,6 +336,11 @@ func (p *parser) Statement() (s ast.Statement) {
 	case token.Return:
 		s = p.ReturnStmt()
 		p.separator("return stmt")
+
+	case token.Break:
+		p.next()
+		s = &ast.BreakStmt{}
+		p.separator("break stmt")
 
 	case token.OpenBrace:
 		s = p.BlockStmt()
@@ -348,13 +384,10 @@ func (p *parser) SimpleStmt() ast.Statement {
 			Op:   p.prev(),
 		}
 	}
-	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq) {
-		return &ast.AssignmentStmt{
-			Lhs: lhs,
-			Op:  p.prev(),
-			Rhs: p.Expression(),
-		}
+	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq, token.ModEq) {
+		return ast.NewAssignmentStmt(lhs, p.prev().Kind, p.Expression())
 	}
+
 	return &ast.ExprStmt{Expr: lhs}
 }
 
@@ -418,10 +451,10 @@ func (p *parser) ForStmt() *ast.ForStmt {
 
 // TODO: when the last statement in a statement list is invalid,
 //
-//	Statement() skips the closing curly brace in attempt to
-//	find the next statement in the list, so the parser will
-//	consume the statements in the outer block. Figure out if
-//	handling this edge case is worth the complexity.
+// Statement() skips the closing curly brace in attempt to
+// find the next statement in the list, so the parser will
+// consume the statements in the outer block. Figure out if
+// handling this edge case is worth the complexity.
 func (p *parser) StmtList() (stmts []ast.Statement) {
 	for p.peek().Kind != token.CloseBrace {
 		stmts = append(stmts, p.Statement())
@@ -473,7 +506,7 @@ func (p *parser) ParamList() (decls []*ast.ParamDecl) {
 func (p *parser) ParamDecl() *ast.ParamDecl {
 	decl := &ast.ParamDecl{}
 	if p.match(token.Identifier) {
-		decl.Ident = p.prev()
+		decl.Ident = &ast.IdentExpr{Ident: p.prev()}
 	}
 	decl.Type = p.Type()
 	return decl
@@ -554,6 +587,11 @@ func (p *parser) MemberDecl() *ast.MemberDecl {
 // Miscellaneous
 
 func (p *parser) Type() *ast.TypeExpr {
+	list := false
+	if p.match(token.OpenBrack) && p.match(token.CloseBrack) {
+		list = true
+	}
+
 	p.consume(token.Identifier, "type name")
 	lexemes := make([]string, 0, 1)
 	lexemes = append(lexemes, p.prev().Lexeme)
@@ -563,5 +601,5 @@ func (p *parser) Type() *ast.TypeExpr {
 		p.consume(token.Identifier, "imported type name")
 		lexemes = append(lexemes, p.prev().Lexeme)
 	}
-	return &ast.TypeExpr{Name: strings.Join(lexemes, ".")}
+	return &ast.TypeExpr{Name: strings.Join(lexemes, "."), List: list}
 }

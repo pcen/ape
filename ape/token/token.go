@@ -21,9 +21,8 @@ const (
 	And // and
 	Or  // or
 
-	Type  // type
-	Class // class
-	// This    // this
+	Type    // type
+	Class   // class
 	Func    // func
 	Public  // public
 	Private // private
@@ -51,6 +50,8 @@ const (
 	StarEq   // *=
 	Power    // **
 	PowerEq  // **=
+	Mod      // %
+	ModEq    // %=
 	Assign   // =
 
 	// comparison
@@ -62,15 +63,20 @@ const (
 	GreaterEq // >=
 
 	// unary
-	Bang      // !
+	/* Minus */
+	/* Tidle */
+	Bang // !
+
 	Increment // ++
 	Decrement // --
 
 	// bitwise
-	Ampersand // &
-	Pipe      // |
-	Tilde     // ~
-	Caret     // ^
+	Ampersand  // &
+	Pipe       // |
+	Tilde      // ~
+	Caret      // ^
+	ShiftRight // >>
+	ShiftLeft  // <<
 
 	Dot        // .
 	Comma      // ,
@@ -108,9 +114,8 @@ var (
 		And: "and",
 		Or:  "or",
 
-		Type:  "type",
-		Class: "class",
-		// This:    "this",
+		Type:    "type",
+		Class:   "class",
 		Func:    "func",
 		Public:  "public",
 		Private: "private",
@@ -137,6 +142,8 @@ var (
 		StarEq:   "*=",
 		Power:    "**",
 		PowerEq:  "**=",
+		Mod:      "%%",
+		ModEq:    "%%=",
 		Assign:   "=",
 
 		Equal:     "==",
@@ -150,10 +157,12 @@ var (
 		Increment: "++",
 		Decrement: "--",
 
-		Ampersand: "&",
-		Pipe:      "|",
-		Tilde:     "~",
-		Caret:     "^",
+		Ampersand:  "&",
+		Pipe:       "|",
+		Tilde:      "~",
+		Caret:      "^",
+		ShiftRight: ">>",
+		ShiftLeft:  "<<",
 
 		Dot:        ".",
 		Comma:      ",",
@@ -175,19 +184,18 @@ var (
 	}
 
 	keywords = map[string]Kind{
-		"if":     If,
-		"elif":   Elif,
-		"else":   Else,
-		"for":    For,
-		"while":  While,
-		"break":  Break,
-		"switch": Switch,
-		"case":   Case,
-		"and":    And,
-		"or":     Or,
-		"type":   Type,
-		"class":  Class,
-		// "this":    This,
+		"if":      If,
+		"elif":    Elif,
+		"else":    Else,
+		"for":     For,
+		"while":   While,
+		"break":   Break,
+		"switch":  Switch,
+		"case":    Case,
+		"and":     And,
+		"or":      Or,
+		"type":    Type,
+		"class":   Class,
 		"func":    Func,
 		"public":  Public,
 		"private": Private,

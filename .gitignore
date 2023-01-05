@@ -12,7 +12,8 @@ build/
 bin/
 install/
 out/
-./bin
+spike/
+bin
 
 # c
 *.o

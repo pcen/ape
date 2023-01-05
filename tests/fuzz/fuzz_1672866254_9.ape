@@ -1,0 +1,28 @@
+module foo ;
+ class foo { foo int ;
+ func foo ( ) int { } ;
+ foo int ;
+ } ;
+ func foo ( ) int { } ;
+ class foo { foo int ;
+ foo int . int . int ;
+ } ;
+ val foo int = - "bar" and - foo ;
+ class foo { foo int . int . int ;
+ func foo ( foo int . int . int , foo int ) int . int . int { ~ false and - false -= - 123 ;
+ } ;
+ } ;
+ class foo { foo int ;
+ func foo ( foo int , foo int . int ) int { ( false ) ;
+ } ;
+ func foo ( ) int { var foo int . int . int = true ( - ~ true , foo <= foo | ( false ^ 123 ) and "bar" , - - ! - ! 123 [ ~ ~ - ~ ~ ~ "bar" or ~ 123 != foo . foo ] , ( 123 . foo | false ) [ ! true * "bar" ] or ~ - true ) ;
+ } ;
+ } ;
+ func foo ( ) int . int { var foo int = - - 123 ;
+ } ;
+ var foo int . int = - "bar" and ( - foo ( ) < 123 ( ~ ( ! ! foo and true ) or foo , 123 [ - - "bar" ] , [ - - false , foo , - false , foo ] [ ~ "bar" - ( ! ! - - false ) . foo ] , foo >= - ! ! "bar" / [ ! - - [ ] and "bar" , false or true , - ~ - false , "bar" ] , ! 123 , - "bar" ) or false ) << foo ;
+ class foo { func foo ( ) int { } ;
+ func foo ( ) int { } ;
+ } ;
+ func foo ( foo int . int , foo int , foo int . int , foo int . int ) int { } ;
+ 

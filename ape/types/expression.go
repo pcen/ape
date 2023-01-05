@@ -27,15 +27,15 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		}
 
 	case *ast.GroupExpr:
-		return c.CheckExpr(e.Expr)
+		t = c.CheckExpr(e.Expr)
 
 	case *ast.UnaryOp:
-		return c.CheckExpr(e.Expr)
+		t = c.CheckExpr(e.Expr)
 
 	case *ast.BinaryOp:
 		t1 := c.CheckExpr(e.Lhs)
 		t2 := c.CheckExpr(e.Rhs)
-		if !Same(t1, t2) {
+		if !t1.Is(t2) {
 			c.err(token.Position{}, "invalid types for binary op: %v %v %v", t1, e.Op, t2)
 		}
 		t = t1
@@ -47,10 +47,50 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		}
 		t = typ
 
+	case *ast.CallExpr:
+		t = c.CheckExpr(e.Callee)
+		for _, arg := range e.Args {
+			c.CheckExpr(arg)
+		}
+
+	case *ast.DotExpr:
+		et := c.CheckExpr(e.Expr)
+		// the type of Field depends on the type of the receiver
+		switch et.(type) {
+		case List:
+			if e.Field.Ident.Lexeme == "push" {
+				t = NewFunction(nil, nil)
+			}
+		default:
+			fmt.Println("WARNING: unknown receiver type in dot expression")
+			t = c.CheckExpr(e.Field)
+		}
+
+	case *ast.IndexExpr:
+		t = c.CheckExpr(e.Expr)
+		c.CheckExpr(e.Index)
+		if list, ok := t.(List); ok {
+			t = list.Data
+		} else {
+			panic("cannot index into non-list type")
+		}
+
+	case *ast.LitListExpr:
+		t = c.CheckExpr(e.Elements[0])
+		if len(e.Elements) >= 2 {
+			for i := 1; i < len(e.Elements); i++ {
+				te := c.CheckExpr(e.Elements[i])
+				if !te.Is(t) {
+					panic("inconsistent types in list literal")
+				}
+			}
+		}
+		t = NewList(t)
+
 	default:
 		panic(fmt.Sprintf("cannot type check expressions of type %v", reflect.TypeOf(expr)))
 	}
 
-	fmt.Printf("%v has type %v\n", expr.ExprStr(), t)
+	c.Types[expr] = t
 	return t
 }

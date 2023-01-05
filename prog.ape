@@ -4,12 +4,30 @@ func foo() {
 	var a int = -1
 	var b int = a * -100
 	if b > 0 {
-		print(b)
+		b++
+		println(b)
 	} else {
-		print(a)
+		println(a)
 	}
+	for var i int = 0; i < 10; i++ {
+		println(i)
+	}
+	println(a)
+	while a < 0 {
+		a++
+	}
+	println(a)
 }
 
 func main() {
 	foo()
+	var a int = 1
+	var b int = 2
+	if a >= b {
+		println(a)
+	} else {
+		println(b)
+	}
+	var c int = b ** 3
+	println(c)
 }

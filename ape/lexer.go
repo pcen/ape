@@ -25,6 +25,7 @@ var (
 		token.Return:     true,
 		token.CloseParen: true,
 		token.CloseBrace: true,
+		token.CloseBrack: true,
 	}
 )
 
@@ -296,6 +297,9 @@ func (l *lexer) step() token.Token {
 		}
 		return l.pick('=', token.StarEq, token.Star)
 
+	case '%':
+		return l.pick('=', token.ModEq, token.Mod)
+
 	case '=':
 		return l.pick('=', token.Equal, token.Assign)
 
@@ -303,9 +307,15 @@ func (l *lexer) step() token.Token {
 		return l.pick('=', token.NotEqual, token.Bang)
 
 	case '<':
+		if l.match('<') {
+			return l.NewToken(token.ShiftLeft)
+		}
 		return l.pick('=', token.LessEq, token.Less)
 
 	case '>':
+		if l.match('>') {
+			return l.NewToken(token.ShiftRight)
+		}
 		return l.pick('=', token.GreaterEq, token.Greater)
 
 	case '&':

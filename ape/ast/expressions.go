@@ -120,8 +120,20 @@ func (e *IndexExpr) ExprStr() string {
 
 type TypeExpr struct {
 	Name string
+	List bool
 }
 
 func (e *TypeExpr) ExprStr() string {
+	if e.List {
+		return fmt.Sprint("[]", e.Name)
+	}
 	return e.Name
+}
+
+type LitListExpr struct {
+	Elements []Expression
+}
+
+func (e *LitListExpr) ExprStr() string {
+	return fmt.Sprint("(", exprListStr(e.Elements), ")")
 }

@@ -22,7 +22,7 @@ simpleStmt    -> incStmt | assignment | expr
 
 incStmt       -> expr ("++" | "--")
 assignment    -> expr assignOp expr
-assignOp      -> "=" | "+=" | "*=" | "-=" | "/=" | "**="
+assignOp      -> "=" | "+=" | "*=" | "-=" | "/=" | "**=" | "%="
 
 compoundStmt  -> ifStmt | forStmt
 
@@ -33,15 +33,19 @@ forStmt       -> "for" typedDecl ";" expr ";" simpleStmt blockStmt
 
 typedDeclStmt -> typedDecl
 
-expr          -> equality
+expr          -> or
+or            -> and ( "or" and )*
+and           -> equality ( "and" equality )*
 equality      -> comparison ( ( "!=" | "==" ) comparison )*
-comparison    -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
+comparison    -> shift ( ( ">" | ">=" | "<" | "<=" ) shift )*
+shift         -> term ( ( ">>" | "<<" ) term )*
 term          -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
-factor        -> unary ( ( "/" | "*" | "&" ) unary )*
+factor        -> unary ( ( "/" | "*" | "&" | "%" ) unary )*
 unary         -> ( "!" | "-" | "~" ) unary | primary
 primary       -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
-atom          -> NUMBER | STRING | IDENT | "true" | "false" | group
+atom          -> NUMBER | STRING | IDENT | "true" | "false" | group | litlist
 group         -> "(" expr ")"
+litlist       -> "[" arguments? "]"
 
 arguments     -> expr ( "," expr ) *
 type          -> IDENT | IDENT ( "." IDENT )*

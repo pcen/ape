@@ -28,7 +28,7 @@ func (s *Scope) DeclareType(name string) error {
 	if _, ok := s.LookupType(name); ok {
 		return fmt.Errorf("type \"%v\" already declared in this scope", name)
 	}
-	s.Types[name] = NewNamedType(name)
+	s.Types[name] = NewNamed(name)
 	return nil
 }
 
@@ -61,7 +61,7 @@ func (s *Scope) Print() {
 
 func GlobalScope() *Scope {
 	scope := NewScope(nil)
-	for _, typ := range primitaveTypes {
+	for typ := range primitives {
 		scope.Types[typ.String()] = typ
 	}
 	return scope
