@@ -426,7 +426,7 @@ func (p *parser) CondBlockStmt() *ast.CondBlockStmt {
 		p.err("missing predicate expression for conditional block")
 	}
 	return &ast.CondBlockStmt{
-		Cond: p.Equality(),
+		Cond: p.Expression(),
 		Body: p.BlockStmt(),
 	}
 }
