@@ -65,7 +65,6 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 		} else {
 			dtyp = c.varDeclWithoutValue(d)
 		}
-		fmt.Printf("%v: %v\n", d.Ident.Lexeme, dtyp)
 		c.Types[d.Type] = dtyp
 
 	case *ast.ClassDecl:

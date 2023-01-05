@@ -62,6 +62,10 @@ type CondBlockStmt struct {
 	Body *BlockStmt
 }
 
+func (s *CondBlockStmt) StmtStr() string {
+	return fmt.Sprintf("(elif %v)", s.Cond.ExprStr())
+}
+
 type IfStmt struct {
 	If    *CondBlockStmt
 	Elifs []*CondBlockStmt

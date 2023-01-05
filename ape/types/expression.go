@@ -39,6 +39,10 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 			c.err(token.Position{}, "invalid types for binary op: %v %v %v", t1, e.Op, t2)
 		}
 		t = t1
+		switch e.Op {
+		case token.Equal, token.NotEqual, token.Greater, token.GreaterEq, token.Less, token.LessEq:
+			t = Bool
+		}
 
 	case *ast.IdentExpr:
 		typ, ok := c.Scope.LookupSymbol(e.Ident.Lexeme)
