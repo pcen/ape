@@ -1,1 +1,1 @@
-tests/fuzz -dif
+tests/fuzz -diff
