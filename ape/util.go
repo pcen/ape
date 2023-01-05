@@ -47,6 +47,7 @@ func utilCompile(path string) (string, error) {
 	code := c.GenerateCode(file.Ast, env)
 	genDur := time.Since(genStart)
 
+	fmt.Println("\ntime summary:")
 	fmt.Printf("lex: %v\nparse: %v\ngen: %v\n", lexDur.Microseconds(), parseDur.Microseconds(), genDur.Microseconds())
 
 	return utilWriteCode(path, &code.Code)

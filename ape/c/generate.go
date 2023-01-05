@@ -260,7 +260,6 @@ func (cg *codegen) expr(expr ast.Expression) {
 
 	case *ast.LitListExpr:
 		tinterface := cg.TypeOf(e)
-		fmt.Println(tinterface.String())
 		_, ok := tinterface.(types.List)
 		if !ok {
 			panic("literal list expr does not have list type")

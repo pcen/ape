@@ -39,7 +39,6 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 			}
 		}
 		c.Types[d.Type] = dtyp
-		fmt.Printf("%v: %v\n", d.Ident.Lexeme, dtyp)
 
 	case *ast.ClassDecl:
 		return
@@ -49,11 +48,14 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 		if err != nil {
 			c.err(d.Name.Position, "undefined return type for %v: %v", d.Name.Lexeme, d.ReturnType.Name)
 		}
+		paramSignature := make([]Type, 0, len(d.Params))
 		for _, p := range d.Params {
 			c.CheckDeclaration(p)
+			paramSignature = append(paramSignature, c.Types[p.Type])
 		}
 		c.CheckStatement(d.Body)
-		fmt.Printf("%v returns type %v\n", d.Name, retType)
+		c.Scope.DeclareSymbol(d.Name.Lexeme, NewFunction(paramSignature, []Type{retType}))
+		fmt.Printf("%v signature: %v -> %v\n", d.Name, paramSignature, retType)
 
 	case *ast.ParamDecl:
 		dtyp, err := c.ResolveTypeNode(d.Type)
