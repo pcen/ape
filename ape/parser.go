@@ -20,19 +20,17 @@ func sync(f func()) {
 
 var (
 	declStart = map[token.Kind]bool{
-		token.Val:  true,
-		token.Var:  true,
-		token.Func: true,
+		token.Identifier: true,
+		token.Func:       true,
 	}
 
 	stmtStart = map[token.Kind]bool{
-		token.Val:       true,
-		token.Var:       true,
-		token.Return:    true,
-		token.OpenBrace: true,
-		token.If:        true,
-		token.For:       true,
-		token.While:     true,
+		token.Identifier: true,
+		token.Return:     true,
+		token.OpenBrace:  true,
+		token.If:         true,
+		token.For:        true,
+		token.While:      true,
 	}
 )
 
@@ -58,7 +56,7 @@ type Parser interface {
 
 type parser struct {
 	tokens []token.Token
-	pos    uint
+	pos    int
 	errors []ParseError
 	decls  []ast.Declaration
 }
@@ -105,6 +103,10 @@ func (p *parser) skipTo(tokens map[token.Kind]bool) bool {
 
 func (p *parser) peek() token.Token {
 	return p.tokens[p.pos]
+}
+
+func (p *parser) peekn(n int) token.Token {
+	return p.tokens[p.pos+n-1]
 }
 
 func (p *parser) peekIs(kinds ...token.Kind) bool {
@@ -329,10 +331,6 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
 
-	case token.Val, token.Var:
-		s = &ast.TypedDeclStmt{Decl: p.TypedDecl()}
-		p.separator("typed decl stmt")
-
 	case token.Return:
 		s = p.ReturnStmt()
 		p.separator("return stmt")
@@ -377,6 +375,10 @@ func (p *parser) Statement() (s ast.Statement) {
 }
 
 func (p *parser) SimpleStmt() ast.Statement {
+	if p.peekIs(token.Identifier) && p.peekn(2).Kind == token.Colon {
+		return &ast.TypedDeclStmt{Decl: p.VarDecl()}
+	}
+
 	lhs := p.Expression()
 	if p.match(token.Increment, token.Decrement) {
 		return &ast.IncStmt{
@@ -433,7 +435,7 @@ func (p *parser) ForStmt() *ast.ForStmt {
 	switch p.next().Kind {
 
 	case token.For:
-		s.Init = p.TypedDecl()
+		s.Init = p.VarDecl()
 		p.separator("after for loop init")
 		s.Cond = p.Expression()
 		p.separator("after for loop condition")
@@ -473,10 +475,6 @@ func (p *parser) Declaration() (d ast.Declaration) {
 
 	switch kind := p.peek().Kind; kind {
 
-	case token.Val, token.Var:
-		d = p.TypedDecl()
-		p.separator("end of val/var decl")
-
 	case token.Func:
 		d = p.FuncDecl()
 		p.separator("end of func decl")
@@ -484,6 +482,10 @@ func (p *parser) Declaration() (d ast.Declaration) {
 	case token.Class:
 		d = p.ClassDecl()
 		p.separator("end of class decl")
+
+	case token.Identifier:
+		d = p.VarDecl()
+		p.separator("end of variable decl")
 
 	default:
 		panic(fmt.Sprintf("%v not a declaration start", kind))
@@ -512,23 +514,28 @@ func (p *parser) ParamDecl() *ast.ParamDecl {
 	return decl
 }
 
-func (p *parser) TypedDecl() *ast.TypedDecl {
-	if p.match(token.Val, token.Var) {
-		decl := &ast.TypedDecl{}
-		decl.Kind = p.prev().Kind
-
-		p.consume(token.Identifier, "typed decl identifier")
+func (p *parser) VarDecl() *ast.VarDecl {
+	decl := &ast.VarDecl{}
+	if p.match(token.Identifier) {
 		decl.Ident = p.prev()
-
+	} else {
+		panic("var decl must have identifier")
+	}
+	p.consume(token.Colon, "var decl colon after identifier")
+	if p.match(token.Assign, token.Colon) {
+		// "foo :=" or "foo ::"
+		decl.Mutable = p.prev().Kind == token.Assign
+		decl.Value = p.Expression()
+	} else {
+		// "foo : bar"
 		decl.Type = p.Type()
-
-		if p.match(token.Assign) {
+		if p.match(token.Assign, token.Colon) {
+			// "foo : bar = baz" or "foo : bar : baz"
+			decl.Mutable = p.prev().Kind == token.Assign
 			decl.Value = p.Expression()
 		}
-		return decl
 	}
-	p.err("missing val or var for typed decl")
-	return nil
+	return decl
 }
 
 func (p *parser) FuncDecl() *ast.FuncDecl {

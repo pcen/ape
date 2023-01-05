@@ -402,7 +402,7 @@ func (cg *codegen) variableDecl(typ *ast.TypeExpr, ident token.Token, expr ast.E
 
 func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
-	case *ast.TypedDecl:
+	case *ast.VarDecl:
 		cg.variableDecl(d.Type, d.Ident, d.Value)
 
 	case *ast.ParamDecl:

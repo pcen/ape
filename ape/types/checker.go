@@ -96,7 +96,7 @@ func (c *Checker) GatherModuleScope() {
 		}
 	}
 
-	for _, d := range filter[*ast.TypedDecl](c.File.Ast) {
+	for _, d := range filter[*ast.VarDecl](c.File.Ast) {
 		if typ, ok := c.Scope.LookupType(d.Type.Name); !ok {
 			c.err(d.Ident.Position, "unknown type in declaration of %v, %v", d.Ident.Lexeme, d.Type)
 		} else if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, typ); err != nil {

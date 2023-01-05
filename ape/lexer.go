@@ -336,6 +336,9 @@ func (l *lexer) step() token.Token {
 	case ',':
 		return l.NewToken(token.Comma)
 
+	case ':':
+		return l.NewToken(token.Colon)
+
 	case '(':
 		return l.NewToken(token.OpenParen)
 
@@ -359,5 +362,4 @@ func (l *lexer) step() token.Token {
 
 	}
 	panic("invalid byte: " + string(b))
-	// return l.NewToken(token.Invalid)
 }

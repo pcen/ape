@@ -48,7 +48,7 @@ func (s *ReturnStmt) StmtStr() string {
 }
 
 type TypedDeclStmt struct {
-	Decl *TypedDecl
+	Decl *VarDecl
 }
 
 func (s *TypedDeclStmt) StmtStr() string {

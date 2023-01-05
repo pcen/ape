@@ -131,7 +131,7 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 
 func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
-	case *ast.TypedDecl:
+	case *ast.VarDecl:
 		cg.gen(d.Value)
 		cg.op(op.Set)
 		idx := cg.ident(d.Ident.Lexeme)

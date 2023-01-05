@@ -26,8 +26,6 @@ const (
 	Func    // func
 	Public  // public
 	Private // private
-	Val     // val
-	Var     // var
 
 	Return // return
 
@@ -80,6 +78,7 @@ const (
 
 	Dot        // .
 	Comma      // ,
+	Colon      // :
 	OpenParen  // (
 	CloseParen // )
 	OpenBrace  // {
@@ -119,8 +118,6 @@ var (
 		Func:    "func",
 		Public:  "public",
 		Private: "private",
-		Val:     "val",
-		Var:     "var",
 
 		Return: "return",
 
@@ -166,6 +163,7 @@ var (
 
 		Dot:        ".",
 		Comma:      ",",
+		Colon:      ":",
 		OpenParen:  "(",
 		CloseParen: ")",
 		OpenBrace:  "{",
@@ -199,8 +197,6 @@ var (
 		"func":    Func,
 		"public":  Public,
 		"private": Private,
-		"val":     Val,
-		"var":     Var,
 		"return":  Return,
 		"true":    True,
 		"false":   False,

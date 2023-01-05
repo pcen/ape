@@ -24,7 +24,7 @@ func (c *Checker) ResolveTypeNode(n *ast.TypeExpr) (Type, error) {
 
 func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 	switch d := decl.(type) {
-	case *ast.TypedDecl:
+	case *ast.VarDecl:
 		dtyp, err := c.ResolveTypeNode(d.Type)
 		if err != nil {
 			c.err(d.Ident.Position, "undefined type %v for %v", d.Type, d.Ident.Lexeme)
