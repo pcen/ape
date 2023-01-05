@@ -9,8 +9,7 @@ import (
 
 func (c *Checker) ResolveTypeNode(n *ast.TypeExpr) (Type, error) {
 	if n == nil {
-		// TODO: this makes ast simpler, but might make parser bugs harder to find
-		return Void, nil
+		return Invalid, errNotTyped
 	}
 	typ, ok := c.Scope.LookupType(n.Name)
 	if !ok {
@@ -22,22 +21,51 @@ func (c *Checker) ResolveTypeNode(n *ast.TypeExpr) (Type, error) {
 	return typ, nil
 }
 
+func (c *Checker) varDeclWithValue(d *ast.VarDecl) Type {
+	dtyp, err := c.ResolveTypeNode(d.Type)
+	etyp := c.CheckExpr(d.Value)
+	if err == errNotTyped {
+		dtyp = etyp // inferred
+	} else if err != nil {
+		c.err(d.Ident.Position, "invalid type %v for %v", d.Type, d.Ident.Lexeme)
+		return Invalid
+	}
+	if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, dtyp); err != nil {
+		c.err(d.Ident.Position, err.Error())
+		return Invalid
+	}
+	if !etyp.Is(dtyp) {
+		c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, dtyp.String(), etyp.String())
+	}
+	return dtyp
+}
+
+func (c *Checker) varDeclWithoutValue(d *ast.VarDecl) Type {
+	dtyp, err := c.ResolveTypeNode(d.Type)
+	if err == errNotTyped {
+		c.err(d.Ident.Position, "%v cannot have implicit type in declaration without value", d.Ident.Lexeme)
+		return Invalid
+	} else if err != nil {
+		c.err(d.Ident.Position, "invalid type %v for %v", d.Type, d.Ident.Lexeme)
+		return Invalid
+	}
+	if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, dtyp); err != nil {
+		c.err(d.Ident.Position, err.Error())
+		return Invalid
+	}
+	return dtyp
+}
+
 func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 	switch d := decl.(type) {
 	case *ast.VarDecl:
-		dtyp, err := c.ResolveTypeNode(d.Type)
-		if err != nil {
-			c.err(d.Ident.Position, "undefined type %v for %v", d.Type, d.Ident.Lexeme)
-		}
-		if err := c.Scope.DeclareSymbol(d.Ident.Lexeme, dtyp); err != nil {
-			c.err(d.Ident.Position, err.Error())
-		}
+		var dtyp Type
 		if d.Value != nil {
-			valueType := c.CheckExpr(d.Value)
-			if !valueType.Is(dtyp) {
-				c.errTypeMissmatch(d.Ident.Position, d.Ident.Lexeme, dtyp.String(), valueType.String())
-			}
+			dtyp = c.varDeclWithValue(d)
+		} else {
+			dtyp = c.varDeclWithoutValue(d)
 		}
+		fmt.Printf("%v: %v\n", d.Ident.Lexeme, dtyp)
 		c.Types[d.Type] = dtyp
 
 	case *ast.ClassDecl:
@@ -65,9 +93,7 @@ func (c *Checker) CheckDeclaration(decl ast.Declaration) {
 		if err := c.Scope.DeclareSymbol(d.Ident.Ident.Lexeme, dtyp); err != nil {
 			c.err(d.Ident.Ident.Position, err.Error())
 		}
-		fmt.Printf("param decl %v has type %v\n", d.Ident, dtyp)
-
-		c.CheckExpr(d.Ident) // set expr type
+		c.CheckExpr(d.Ident)
 		c.Types[d.Type] = dtyp
 
 	default:

@@ -147,7 +147,7 @@ func (l List) Is(other Type) bool {
 }
 
 func (l List) String() string {
-	return fmt.Sprintf("list %v", l.Data)
+	return fmt.Sprintf("[]%v", l.Data)
 }
 
 func (l List) Underlying() Type {

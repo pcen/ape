@@ -1,10 +1,15 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/token"
+)
+
+var (
+	errNotTyped = errors.New("not typed")
 )
 
 type checkerError struct {

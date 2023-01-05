@@ -6,6 +6,7 @@ import (
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/token"
+	"github.com/pcen/ape/ape/types"
 )
 
 // propagates panic errors that are not ParseError
@@ -551,6 +552,8 @@ func (p *parser) FuncDecl() *ast.FuncDecl {
 
 	if p.peekIs(token.Identifier) {
 		fd.ReturnType = p.Type()
+	} else {
+		fd.ReturnType = &ast.TypeExpr{Name: types.Void.String()}
 	}
 
 	fd.Body = p.BlockStmt()
