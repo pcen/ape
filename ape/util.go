@@ -50,7 +50,7 @@ func utilCompile(path string) (string, error) {
 	fmt.Println("\ntime summary:")
 	fmt.Printf("lex: %v\nparse: %v\ngen: %v\n", lexDur.Microseconds(), parseDur.Microseconds(), genDur.Microseconds())
 
-	return utilWriteCode(path, &code.Code)
+	return utilWriteCode(path, code.Code)
 }
 
 func EndToEndC(path string) {
@@ -70,4 +70,24 @@ func EndToEndC(path string) {
 	dur := time.Since(start)
 	fmt.Printf("gcc: %v\n", gccDur.Microseconds())
 	fmt.Printf("total (ms): %v\n", dur.Milliseconds())
+}
+
+type ApeOpts struct {
+	Run bool
+	Src string
+	Out string
+}
+
+// CLI program interface
+func Ape(opts ApeOpts) {
+	if opts.Out == "" {
+		opts.Out = "./bin"
+	}
+
+	tokens := NewLexer().LexFile(opts.Src)
+	file := NewParser(tokens).File()
+	env := types.NewChecker(file).Check()
+	code := c.GenerateCode(file.Ast, env)
+	compiled, _ := utilWriteCode(opts.Src, code.Code)
+	exec.Command("gcc", compiled, "-o", opts.Out).Run()
 }

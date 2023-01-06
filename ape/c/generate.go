@@ -65,7 +65,7 @@ func GenerateCode(decls []ast.Declaration, env types.Environment) *codegen {
 }
 
 type codegen struct {
-	Code  strings.Builder
+	Code  *strings.Builder
 	Env   types.Environment
 	level int
 }
@@ -78,7 +78,10 @@ func (cg *codegen) TypeOf(expr ast.Expression) types.Type {
 }
 
 func newCodegen(env types.Environment) *codegen {
-	return &codegen{Env: env}
+	return &codegen{
+		Code: &strings.Builder{},
+		Env:  env,
+	}
 }
 
 func (cg *codegen) write(s string) {

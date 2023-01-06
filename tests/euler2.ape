@@ -4,6 +4,7 @@ func main() {
 	four_million :: 4000000
 	f1 := 1
 	f2 := 2
+	sum := 2
 
 	while f1 < four_million and f2 < four_million {
 		f1 = f1 + f2

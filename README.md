@@ -20,7 +20,7 @@ lex file into tokens -> parse tokens into ast -> type check ast -> generate code
 
 ## testing
 [cmd/gen/main.go](./cmd/gen/main.go) - Generates input for the parser based on the grammar described in [grammar.txt](./grammar.txt), using [dist.txt](./dist.txt) to control how grammar rules are expanded. These test programs are valid grammar derivations, but are not validly typed. \
-[tests](./tests) - Contains handwritten programs to test the language.
+[tests](./tests) - Contains handwritten programs to test the language. All tests can be run and verified with `go run ./tests/run.go`.
 
 ## scratch
 
