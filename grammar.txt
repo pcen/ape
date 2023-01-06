@@ -1,51 +1,55 @@
-program       -> moduleDecl decl*
+program        -> moduleDecl decl*
 
-moduleDecl    -> "module" IDENT ";"
-decl          -> (typedDecl | funcDecl | classDecl) ";"
+moduleDecl     -> "module" IDENT ";"
+decl           -> ( varDecl | funcDecl | classDecl ) ";"
 
-typedDecl     -> ("val" | "var") IDENT type  "=" expr
-funcDecl      -> "func" IDENT "(" parameters? ")" type blockStmt
+varDecl        -> typedVarDecl | untypedVarDecl
+typedVarDecl   -> ( IDENT  ":" type "=" expr ) | ( IDENT ":" type ":" expr )
+untypedVarDecl -> ( IDENT ":" "=" expr ) | ( IDENT ":" ":" expr )
 
-classDecl     -> "class" IDENT classBody
-classBody     -> "{" ( ( memberDecl | funcDecl ) ";" )* "}"
-memberDecl    -> IDENT type
 
-parameters    -> paramDecl ( "," paramDecl )*
-paramDecl     -> IDENT type
+funcDecl       -> "func" IDENT "(" parameters? ")" type blockStmt
 
-blockStmt     -> "{" stmtList "}"
-stmtList      -> (stmt ";") *
+classDecl      -> "class" IDENT classBody
+classBody      -> "{" ( ( memberDecl | funcDecl ) ";" )* "}"
+memberDecl     -> IDENT type
 
-stmt          -> simpleStmt | compoundStmt | typedDeclStmt
+parameters     -> paramDecl ( "," paramDecl )*
+paramDecl      -> IDENT type
 
-simpleStmt    -> incStmt | assignment | expr
+blockStmt      -> "{" stmtList "}"
+stmtList       -> (stmt ";") *
 
-incStmt       -> expr ("++" | "--")
-assignment    -> expr assignOp expr
-assignOp      -> "=" | "+=" | "*=" | "-=" | "/=" | "**=" | "%="
+stmt           -> simpleStmt | compoundStmt | varDeclStmt
 
-compoundStmt  -> ifStmt | forStmt
+simpleStmt     -> incStmt | assignment | expr
 
-ifStmt        -> "if" condBlockStmt "else" blockStmt
-condBlockStmt -> equality blockStmt
+incStmt        -> expr ("++" | "--")
+assignment     -> expr assignOp expr
+assignOp       -> "=" | "+=" | "*=" | "-=" | "/=" | "**=" | "%="
 
-forStmt       -> "for" typedDecl ";" expr ";" simpleStmt blockStmt
+compoundStmt   -> ifStmt | forStmt
 
-typedDeclStmt -> typedDecl
+ifStmt         -> "if" condBlockStmt "else" blockStmt
+condBlockStmt  -> equality blockStmt
 
-expr          -> or
-or            -> and ( "or" and )*
-and           -> equality ( "and" equality )*
-equality      -> comparison ( ( "!=" | "==" ) comparison )*
-comparison    -> shift ( ( ">" | ">=" | "<" | "<=" ) shift )*
-shift         -> term ( ( ">>" | "<<" ) term )*
-term          -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
-factor        -> unary ( ( "/" | "*" | "&" | "%" ) unary )*
-unary         -> ( "!" | "-" | "~" ) unary | primary
-primary       -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
-atom          -> NUMBER | STRING | IDENT | "true" | "false" | group | litlist
-group         -> "(" expr ")"
-litlist       -> "[" arguments? "]"
+forStmt        -> "for" varDecl ";" expr ";" simpleStmt blockStmt
 
-arguments     -> expr ( "," expr ) *
-type          -> IDENT | IDENT ( "." IDENT )*
+varDeclStmt    -> varDecl
+
+expr           -> or
+or             -> and ( "or" and )*
+and            -> equality ( "and" equality )*
+equality       -> comparison ( ( "!=" | "==" ) comparison )*
+comparison     -> shift ( ( ">" | ">=" | "<" | "<=" ) shift )*
+shift          -> term ( ( ">>" | "<<" ) term )*
+term           -> factor ( ( "-" | "+" | "|" | "^" ) factor )*
+factor         -> unary ( ( "/" | "*" | "&" | "%" ) unary )*
+unary          -> ( "!" | "-" | "~" ) unary | primary
+primary        -> atom ( ( "(" arguments? ")" ) | ( "." IDENT ) | ( "[" expr "]" ) )*
+atom           -> NUMBER | STRING | IDENT | "true" | "false" | group | litlist
+group          -> "(" expr ")"
+litlist        -> "[" arguments? "]"
+
+arguments      -> expr ( "," expr ) *
+type           -> IDENT | IDENT ( "." IDENT )*

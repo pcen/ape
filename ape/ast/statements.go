@@ -48,7 +48,7 @@ func (s *ReturnStmt) StmtStr() string {
 }
 
 type TypedDeclStmt struct {
-	Decl *TypedDecl
+	Decl *VarDecl
 }
 
 func (s *TypedDeclStmt) StmtStr() string {
@@ -60,6 +60,10 @@ func (s *TypedDeclStmt) StmtStr() string {
 type CondBlockStmt struct {
 	Cond Expression
 	Body *BlockStmt
+}
+
+func (s *CondBlockStmt) StmtStr() string {
+	return fmt.Sprintf("(elif %v)", s.Cond.ExprStr())
 }
 
 type IfStmt struct {

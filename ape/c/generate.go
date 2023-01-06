@@ -65,7 +65,7 @@ func GenerateCode(decls []ast.Declaration, env types.Environment) *codegen {
 }
 
 type codegen struct {
-	Code  strings.Builder
+	Code  *strings.Builder
 	Env   types.Environment
 	level int
 }
@@ -78,7 +78,10 @@ func (cg *codegen) TypeOf(expr ast.Expression) types.Type {
 }
 
 func newCodegen(env types.Environment) *codegen {
-	return &codegen{Env: env}
+	return &codegen{
+		Code: &strings.Builder{},
+		Env:  env,
+	}
 }
 
 func (cg *codegen) write(s string) {
@@ -235,32 +238,14 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.index(e.Expr, e.Index)
 
 	case *ast.TypeExpr:
-		if e.List {
-			if t, ok := cg.Env.Expressions[expr]; ok {
-				switch {
-				case t.Is(types.IntList):
-					cg.write(vectorImplementations[t])
-				case t.Is(types.StringList):
-					cg.write(vectorImplementations[t])
-				}
-			}
-			break
-		}
-
-		if t, ok := cg.Env.Expressions[expr].(types.List); ok {
-			cg.write(vectorImplementations[t])
-			break
-		}
-		switch e.Name {
-		case types.String.String():
-			cg.write("char*")
-		default:
-			cg.write(e.Name)
-		}
+		// TODO: work out exactly what a type expr represents
+		// typstr method should probably be used based on environment
+		// from type checker instead of using ast nodes to generate types
+		// in most cases
+		cg.write(cg.typstr(cg.TypeOf(e)))
 
 	case *ast.LitListExpr:
 		tinterface := cg.TypeOf(e)
-		fmt.Println(tinterface.String())
 		_, ok := tinterface.(types.List)
 		if !ok {
 			panic("literal list expr does not have list type")
@@ -383,15 +368,15 @@ func (cg *codegen) params(decls []*ast.ParamDecl) {
 	cg.write(")")
 }
 
-func (cg *codegen) variableDecl(typ *ast.TypeExpr, ident token.Token, expr ast.Expression) {
-	cg.expr(typ)
+func (cg *codegen) variableDecl(ident token.Token, expr ast.Expression) {
+	t := cg.TypeOf(expr)
+	cg.write(cg.typstr(t))
 	cg.write(" ")
 	cg.write(ident.Lexeme)
 	if expr != nil {
 		cg.write(" = ")
 		cg.gen(expr)
 	} else {
-		t := cg.TypeOf(typ)
 		if _, ok := t.(types.List); ok {
 			cg.write(" = ")
 			cg.write(emptyVectorInitializerFunctionCall(t))
@@ -402,12 +387,12 @@ func (cg *codegen) variableDecl(typ *ast.TypeExpr, ident token.Token, expr ast.E
 
 func (cg *codegen) decl(decl ast.Declaration) {
 	switch d := decl.(type) {
-	case *ast.TypedDecl:
-		cg.variableDecl(d.Type, d.Ident, d.Value)
+	case *ast.VarDecl:
+		cg.variableDecl(d.Ident, d.Value)
 
 	case *ast.ParamDecl:
 		// TODO: this is a hack, they should be generated as regular c function parameters
-		cg.variableDecl(d.Type, d.Ident.Ident, nil)
+		cg.variableDecl(d.Ident.Ident, nil)
 
 	case *ast.FuncDecl:
 		cg.write("\n")

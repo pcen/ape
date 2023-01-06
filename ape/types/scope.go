@@ -37,6 +37,9 @@ func (s *Scope) LookupSymbol(name string) (Type, bool) {
 	if !ok && s.Parent != nil {
 		typ, ok = s.Parent.LookupSymbol(name)
 	}
+	if typ == nil {
+		typ = Invalid
+	}
 	return typ, ok
 }
 

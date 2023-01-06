@@ -20,19 +20,27 @@ func (d *ParamDecl) DeclStr() string {
 	return fmt.Sprintf("%v %v", d.Ident.ExprStr(), d.Type)
 }
 
-type TypedDecl struct {
-	Kind  token.Kind  // val | var
-	Ident token.Token // TODO: are not sure if IdentExpr is a good idea, but should be consistent
-	Type  *TypeExpr
-	Value Expression
+type VarDecl struct {
+	Mutable bool
+	Ident   token.Token // TODO: are not sure if IdentExpr is a good idea, but should be consistent
+	Type    *TypeExpr
+	Value   Expression
 }
 
-func (d *TypedDecl) DeclStr() string {
-	valueString := "<NONE>"
-	if d.Value != nil {
-		valueString = d.Value.ExprStr()
+func (d *VarDecl) DeclStr() string {
+	mut := "<IMMUTABLE>"
+	if d.Mutable {
+		mut = "<MUTABLE>"
 	}
-	return fmt.Sprintf("(%v %v %v %v)", d.Kind, d.Ident, d.Type.ExprStr(), valueString)
+	val := "<DEFAULT VALUE>"
+	if d.Value != nil {
+		val = d.Value.ExprStr()
+	}
+	typ := "<IMPLICIT TYPE>"
+	if d.Type != nil {
+		typ = d.Type.Name
+	}
+	return fmt.Sprintf("(%v %v %v %v)", mut, d.Ident, typ, val)
 }
 
 type FuncDecl struct {

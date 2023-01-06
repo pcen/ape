@@ -1,9 +1,9 @@
 module tests
 
 func main (argv []string) {
-	var a []int = [2, 3, 5, 7]
-	var sum int = 1
-	for var i int = 0; i < 4; i++ {
+	a := [2, 3, 5, 7]
+	sum := 1
+	for i := 0; i < 4; i++ {
 		sum *= a[i]
 	}
 	println(sum)

@@ -1,8 +1,8 @@
 module tests
 
 func main() {
-	var u int = 2147483646
-	var v int = 125135235
+	u := 2147483646
+	v := 125135235
 
 	if u < 0 {
 		u = -u
