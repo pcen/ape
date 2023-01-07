@@ -142,9 +142,9 @@ func (cg *codegen) index(receiver ast.Expression, index ast.Expression) {
 }
 
 func (cg *codegen) expr(expr ast.Expression) {
-	sepWithOpLiteral := func(lhs ast.Expression, op token.Kind, rhs ast.Expression) {
+	sepWithOpLiteral := func(lhs ast.Expression, op token.Token, rhs ast.Expression) {
 		cg.gen(lhs)
-		cg.write(" " + op.String() + " ")
+		cg.write(" " + op.Kind.String() + " ")
 		cg.gen(rhs)
 	}
 
@@ -176,7 +176,7 @@ func (cg *codegen) expr(expr ast.Expression) {
 		cg.write(e.Ident.Lexeme)
 
 	case *ast.BinaryOp:
-		switch e.Op {
+		switch e.Op.Kind {
 		case token.Plus, token.Minus, token.Star, token.Divide:
 			sepWithOpLiteral(e.Lhs, e.Op, e.Rhs)
 

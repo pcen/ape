@@ -182,7 +182,7 @@ func (p *parser) Expression() ast.Expression {
 func (p *parser) leftAssociativeBinaryOp(rule func() ast.Expression, types ...token.Kind) ast.Expression {
 	lhs := rule()
 	for p.match(types...) {
-		lhs = ast.NewBinaryOp(lhs, p.prev().Kind, rule())
+		lhs = ast.NewBinaryOp(lhs, p.prev(), rule())
 	}
 	return lhs
 }
@@ -227,7 +227,7 @@ func (p *parser) Unary() ast.Expression {
 func (p *parser) Power() ast.Expression {
 	base := p.Primary()
 	if p.match(token.Power) {
-		return ast.NewBinaryOp(base, token.Power, p.Power())
+		return ast.NewBinaryOp(base, p.prev(), p.Power())
 	}
 	return base
 }
@@ -388,7 +388,7 @@ func (p *parser) SimpleStmt() ast.Statement {
 		}
 	}
 	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq, token.ModEq) {
-		return ast.NewAssignmentStmt(lhs, p.prev().Kind, p.Expression())
+		return ast.NewAssignmentStmt(lhs, p.prev(), p.Expression())
 	}
 
 	return &ast.ExprStmt{Expr: lhs}

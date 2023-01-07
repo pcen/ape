@@ -79,7 +79,7 @@ func NewUnaryOp(op token.Kind, expr Expression) Expression {
 
 type BinaryOp struct {
 	Lhs Expression
-	Op  token.Kind
+	Op  token.Token
 	Rhs Expression
 }
 
@@ -87,7 +87,7 @@ func (e *BinaryOp) ExprStr() string {
 	return fmt.Sprintf("(%v %v %v)", e.Op, e.Lhs.ExprStr(), e.Rhs.ExprStr())
 }
 
-func NewBinaryOp(lhs Expression, op token.Kind, rhs Expression) Expression {
+func NewBinaryOp(lhs Expression, op token.Token, rhs Expression) Expression {
 	return &BinaryOp{Lhs: lhs, Op: op, Rhs: rhs}
 }
 
