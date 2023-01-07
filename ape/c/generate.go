@@ -158,7 +158,7 @@ func (cg *codegen) expr(expr ast.Expression) {
 
 	case *ast.LiteralExpr:
 		switch e.Kind {
-		case token.Integer:
+		case token.Integer, token.Rational:
 			cg.write(e.Lexeme)
 		case token.True:
 			cg.write("1")
