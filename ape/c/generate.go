@@ -380,6 +380,15 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 			})
 		}
 
+	case *ast.FallthroughtStmt:
+		// TODO: This case is reached when generating code for a block stmt,
+		// which means that the generated c code will have an empty statement
+		// here since the block statement case will insert indentation/semicolon
+		// before/after this case. Can clean this up if the empty statement makes
+		// generated c code confusing by skipping *ast.Fallthrough nodes in
+		// the block statement codegen loop.
+		break
+
 	default:
 		panic("cannot gen for statement " + reflect.TypeOf(stmt).String())
 	}

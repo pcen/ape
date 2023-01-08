@@ -345,6 +345,11 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = p.SwitchStmt()
 		p.separator("end of switch statement")
 
+	case token.Fallthrough:
+		p.next()
+		s = &ast.FallthroughtStmt{}
+		p.separator("fallthrough stmt")
+
 	case token.OpenBrace:
 		s = p.BlockStmt()
 		p.separator("end of block stmt")

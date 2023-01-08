@@ -83,6 +83,9 @@ func (c *Checker) CheckStatement(stmt ast.Statement) {
 	case *ast.CaseStmt:
 		c.CheckStatement(s.Body)
 
+	case *ast.FallthroughtStmt:
+		break
+
 	default:
 		panic("cannot check statement " + s.StmtStr() + ", " + reflect.TypeOf(stmt).String())
 	}
