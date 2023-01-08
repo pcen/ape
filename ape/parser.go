@@ -341,6 +341,10 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = &ast.BreakStmt{}
 		p.separator("break stmt")
 
+	case token.Switch:
+		s = p.SwitchStmt()
+		p.separator("end of switch statement")
+
 	case token.OpenBrace:
 		s = p.BlockStmt()
 		p.separator("end of block stmt")
@@ -406,6 +410,43 @@ func (p *parser) BlockStmt() *ast.BlockStmt {
 	return &ast.BlockStmt{Content: content}
 }
 
+func (p *parser) SwitchStmt() *ast.SwitchStmt {
+	// TODO: make sure that there is only 1 default case in the switch statement
+	stmt := &ast.SwitchStmt{Cases: make([]*ast.CaseStmt, 0)}
+	p.consume(token.Switch, "switch stmt start")
+	stmt.Token = p.prev()
+	stmt.Expr = p.Expression()
+	p.consume(token.OpenBrace, "switch stmt open brace")
+	for p.peekIs(token.Case, token.Default) {
+		stmt.Cases = append(stmt.Cases, p.CaseStmt())
+	}
+	p.consume(token.CloseBrace, "switch stmt end")
+	return stmt
+}
+
+func (p *parser) CaseStmt() *ast.CaseStmt {
+	stmt := &ast.CaseStmt{}
+	stmt.Body = &ast.BlockStmt{Content: make([]ast.Statement, 0)}
+	if p.peekIs(token.Case) {
+		p.consume(token.Case, "start of case statement")
+		stmt.Token = p.prev()
+		stmt.Expr = p.Expression()
+	} else {
+		p.consume(token.Default, "start of default case statement")
+		stmt.Token = p.prev()
+	}
+	p.consume(token.Colon, "case expression is followed by colon")
+	// The block statement in a switch case is parsed differently than
+	// regular block statements because it does not require opening and
+	// closing curly braces. A case block statement is done when the next
+	// case (including default) begins, or the closing brace of the entire
+	// switch statement is next.
+	for !p.peekIs(token.Case, token.Default, token.CloseBrace) {
+		stmt.Body.Content = append(stmt.Body.Content, p.Statement())
+	}
+	return stmt
+}
+
 func (p *parser) IfStmt() *ast.IfStmt {
 	stmt := &ast.IfStmt{
 		Elifs: make([]*ast.CondBlockStmt, 0),
@@ -459,7 +500,7 @@ func (p *parser) ForStmt() *ast.ForStmt {
 // consume the statements in the outer block. Figure out if
 // handling this edge case is worth the complexity.
 func (p *parser) StmtList() (stmts []ast.Statement) {
-	for p.peek().Kind != token.CloseBrace {
+	for !p.peekIs(token.CloseBrace) {
 		stmts = append(stmts, p.Statement())
 	}
 	return stmts

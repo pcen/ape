@@ -67,5 +67,7 @@ func GlobalScope() *Scope {
 	for typ := range primitives {
 		scope.Types[typ.String()] = typ
 	}
+	// TODO: properly define all builtin function signatures somewhere
+	scope.Symbols["println"] = NewFunction([]Type{Any}, []Type{Void})
 	return scope
 }

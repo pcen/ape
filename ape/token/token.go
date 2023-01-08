@@ -15,8 +15,9 @@ const (
 	While // while
 	Break // break
 
-	Switch // switch
-	Case   // case
+	Switch  // switch
+	Case    // case
+	Default // default
 
 	And // and
 	Or  // or
@@ -107,8 +108,9 @@ var (
 		While: "while",
 		Break: "break",
 
-		Switch: "switch",
-		Case:   "case",
+		Switch:  "switch",
+		Case:    "case",
+		Default: "default",
 
 		And: "and",
 		Or:  "or",
@@ -190,6 +192,7 @@ var (
 		"break":   Break,
 		"switch":  Switch,
 		"case":    Case,
+		"default": Default,
 		"and":     And,
 		"or":      Or,
 		"type":    Type,

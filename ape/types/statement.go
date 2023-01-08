@@ -71,6 +71,18 @@ func (c *Checker) CheckStatement(stmt ast.Statement) {
 	case *ast.BreakStmt:
 		break
 
+	case *ast.SwitchStmt:
+		t := c.CheckExpr(s.Expr)
+		if _, ok := t.(Primitive); !ok {
+			c.err(s.Token.Position, "invalid type for switch value: %v", t)
+		}
+		for _, caseStmt := range s.Cases {
+			c.CheckStatement(caseStmt)
+		}
+
+	case *ast.CaseStmt:
+		c.CheckStatement(s.Body)
+
 	default:
 		panic("cannot check statement " + s.StmtStr() + ", " + reflect.TypeOf(stmt).String())
 	}

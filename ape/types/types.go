@@ -37,6 +37,7 @@ const (
 	Double
 	Char
 	String
+	Any
 )
 
 func (p Primitive) String() string {
@@ -72,6 +73,7 @@ var (
 		Double:    "double",
 		Char:      "char",
 		String:    "string",
+		Any:       "any",
 	}
 )
 

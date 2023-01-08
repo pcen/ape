@@ -32,6 +32,10 @@ var (
 			"euler2.ape",
 			"4613732",
 		},
+		{
+			"switches.ape",
+			"1",
+		},
 	}
 )
 

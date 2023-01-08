@@ -133,3 +133,38 @@ type BreakStmt struct{}
 func (s *BreakStmt) StmtStr() string {
 	return "break"
 }
+
+type SwitchStmt struct {
+	Token token.Token // switch keyword
+	Expr  Expression  // value being switched on
+	Cases []*CaseStmt
+}
+
+func (s *SwitchStmt) StmtStr() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("(switch %v\n", s.Expr.ExprStr()))
+	for _, c := range s.Cases {
+		sb.WriteString(fmt.Sprintf("\t%v\n", c.StmtStr()))
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
+type CaseStmt struct {
+	Token token.Token // "case" or "default"
+	Expr  Expression  // x in "case x:" or nil when "default:"
+	Body  *BlockStmt
+}
+
+func (s *CaseStmt) StmtStr() string {
+	if s.Expr != nil {
+		return fmt.Sprintf("(case %v)", s.Expr.ExprStr())
+	}
+	return "(default case)"
+}
+
+type FallthroughtStmt struct{}
+
+func (s *FallthroughtStmt) StmtStr() string {
+	return "fallthrough"
+}
