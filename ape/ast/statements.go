@@ -116,9 +116,9 @@ var assignmentToBinaryOp = map[token.Kind]token.Kind{
 	token.ModEq:    token.Mod,
 }
 
-func NewAssignmentStmt(lhs Expression, op token.Kind, rhs Expression) *AssignmentStmt {
-	if op != token.Assign {
-		op = assignmentToBinaryOp[op]
+func NewAssignmentStmt(lhs Expression, op token.Token, rhs Expression) *AssignmentStmt {
+	if op.Kind != token.Assign {
+		op = token.New(assignmentToBinaryOp[op.Kind], op.Position)
 		rhs = &BinaryOp{Lhs: lhs, Op: op, Rhs: rhs}
 	}
 	return &AssignmentStmt{Lhs: lhs, Rhs: rhs}

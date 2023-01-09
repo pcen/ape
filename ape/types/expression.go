@@ -36,10 +36,12 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		t1 := c.CheckExpr(e.Lhs)
 		t2 := c.CheckExpr(e.Rhs)
 		if !t1.Is(t2) {
-			c.err(token.Position{}, "invalid types for binary op: %v %v %v", t1, e.Op, t2)
+			c.err(e.Op.Position, "invalid types for binary op: %v %v %v", t1, e.Op, t2)
+			t = Invalid
+			break
 		}
 		t = t1
-		switch e.Op {
+		switch e.Op.Kind {
 		case token.Equal, token.NotEqual, token.Greater, token.GreaterEq, token.Less, token.LessEq:
 			t = Bool
 		}

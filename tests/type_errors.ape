@@ -1,0 +1,9 @@
+module tests
+
+func main(argv []string) {
+	a := 1
+	b := "foo"
+	c := a + b
+	d := ["a", "b", "c"] + 1.5
+	println(1.2)
+}
