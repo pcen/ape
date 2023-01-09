@@ -12,20 +12,28 @@ const (
 )
 
 var (
+	// stmtEndTokens is the list of tokens that a valid statement can end with.
+	// Since ape does not require that statements be explicitly be terminated
+	// with semicolons, the lexer automatically inserts statement separators (Sep)
+	// when it reads a newline token, and the previously read token was a token
+	// that can terminate a valid statement. This allows the parser to always assert
+	// that a statement is terminated by the Sep token. This is similar to how the
+	// go lexer works: https://groups.google.com/g/golang-nuts/c/XuMrWI0Q8uk/m/kXcBb4W3rH8J
 	stmtEndTokens = map[token.Kind]bool{
-		token.Identifier: true,
-		token.Integer:    true,
-		token.Rational:   true,
-		token.String:     true,
-		token.True:       true,
-		token.False:      true,
-		token.Break:      true,
-		token.Decrement:  true,
-		token.Increment:  true,
-		token.Return:     true,
-		token.CloseParen: true,
-		token.CloseBrace: true,
-		token.CloseBrack: true,
+		token.Identifier:  true,
+		token.Integer:     true,
+		token.Rational:    true,
+		token.String:      true,
+		token.True:        true,
+		token.False:       true,
+		token.Break:       true,
+		token.Fallthrough: true,
+		token.Decrement:   true,
+		token.Increment:   true,
+		token.Return:      true,
+		token.CloseParen:  true,
+		token.CloseBrace:  true,
+		token.CloseBrack:  true,
 	}
 )
 

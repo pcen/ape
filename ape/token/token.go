@@ -15,8 +15,10 @@ const (
 	While // while
 	Break // break
 
-	Switch // switch
-	Case   // case
+	Switch      // switch
+	Case        // case
+	Default     // default
+	Fallthrough // fallthrough
 
 	And // and
 	Or  // or
@@ -107,8 +109,10 @@ var (
 		While: "while",
 		Break: "break",
 
-		Switch: "switch",
-		Case:   "case",
+		Switch:      "switch",
+		Case:        "case",
+		Default:     "default",
+		Fallthrough: "fallthrough",
 
 		And: "and",
 		Or:  "or",
@@ -182,26 +186,28 @@ var (
 	}
 
 	keywords = map[string]Kind{
-		"if":      If,
-		"elif":    Elif,
-		"else":    Else,
-		"for":     For,
-		"while":   While,
-		"break":   Break,
-		"switch":  Switch,
-		"case":    Case,
-		"and":     And,
-		"or":      Or,
-		"type":    Type,
-		"class":   Class,
-		"func":    Func,
-		"public":  Public,
-		"private": Private,
-		"return":  Return,
-		"true":    True,
-		"false":   False,
-		"module":  Module,
-		"import":  Import,
+		"if":          If,
+		"elif":        Elif,
+		"else":        Else,
+		"for":         For,
+		"while":       While,
+		"break":       Break,
+		"switch":      Switch,
+		"case":        Case,
+		"default":     Default,
+		"fallthrough": Fallthrough,
+		"and":         And,
+		"or":          Or,
+		"type":        Type,
+		"class":       Class,
+		"func":        Func,
+		"public":      Public,
+		"private":     Private,
+		"return":      Return,
+		"true":        True,
+		"false":       False,
+		"module":      Module,
+		"import":      Import,
 	}
 )
 

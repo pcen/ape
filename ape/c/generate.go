@@ -340,6 +340,55 @@ func (cg *codegen) stmt(stmt ast.Statement) {
 	case *ast.BreakStmt:
 		cg.write("break")
 
+	case *ast.SwitchStmt:
+		cg.write("switch (")
+		cg.expr(t.Expr)
+		cg.write(") {\n")
+		for _, caseStmt := range t.Cases {
+
+			cg.stmt(caseStmt)
+
+		}
+		cg.sil("}")
+
+	case *ast.CaseStmt:
+		// need to manually indent since case statements are not single line
+		// statements being generated as part of a block statement
+		cg.indent()
+		if t.Token.Kind == token.Default {
+			cg.write("default")
+		} else {
+			cg.write("case ")
+			cg.gen(t.Expr)
+		}
+		cg.write(":\n")
+		cg.indented(func() {
+			cg.stmt(t.Body)
+		})
+		// need to insert a break statement by default, unless the case ends
+		// with a fallthrough statement
+		insertBreak := true
+		if len(t.Body.Content) > 0 {
+			last := t.Body.Content[len(t.Body.Content)-1]
+			_, ok := last.(*ast.FallthroughtStmt)
+			insertBreak = !ok
+		}
+		if insertBreak {
+			cg.indented(func() {
+				cg.indent()
+				cg.write("break;\n")
+			})
+		}
+
+	case *ast.FallthroughtStmt:
+		// TODO: This case is reached when generating code for a block stmt,
+		// which means that the generated c code will have an empty statement
+		// here since the block statement case will insert indentation/semicolon
+		// before/after this case. Can clean this up if the empty statement makes
+		// generated c code confusing by skipping *ast.Fallthrough nodes in
+		// the block statement codegen loop.
+		break
+
 	default:
 		panic("cannot gen for statement " + reflect.TypeOf(stmt).String())
 	}

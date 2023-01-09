@@ -32,6 +32,18 @@ var (
 			"euler2.ape",
 			"4613732",
 		},
+		{
+			"gcd.ape",
+			"9",
+		},
+		{
+			"list.ape",
+			"210",
+		},
+		{
+			"switches.ape",
+			"3\n2\n1",
+		},
 	}
 )
 
@@ -70,6 +82,6 @@ func main() {
 	if failures > 0 {
 		fmt.Printf("failed %v / %v tests\n", failures, len(tests))
 	} else {
-		fmt.Println("passed all tests")
+		fmt.Printf("passed all %v tests\n", len(tests))
 	}
 }
