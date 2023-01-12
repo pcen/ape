@@ -20,9 +20,13 @@ func utilWriteCode(path string, sb *strings.Builder) (string, error) {
 	suffix := filepath.Ext(base)
 	base = strings.TrimSuffix(base, suffix)
 
-	if err := os.Mkdir(OutputDir, os.ModePerm); err != nil {
-		fmt.Printf("error creating output directory %v: %v\n", OutputDir, err.Error())
-		os.Exit(1)
+	if _, err := os.Stat(OutputDir); err != nil {
+		fmt.Printf("creating output directory \"%v\"\n", OutputDir)
+
+		if err := os.Mkdir(OutputDir, os.ModePerm); err != nil {
+			fmt.Printf("error creating output directory \"%v\": %v\n", OutputDir, err.Error())
+			os.Exit(1)
+		}
 	}
 
 	output := fmt.Sprintf("./%v/%v.i", OutputDir, base)
