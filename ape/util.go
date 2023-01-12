@@ -15,18 +15,26 @@ import (
 
 const OutputDir = "out"
 
+func utilCreateDir(dirPath string) error {
+	if _, err := os.Stat(dirPath); err != nil {
+		fmt.Printf("creating output directory \"%v\"\n", dirPath)
+
+		if err := os.Mkdir(dirPath, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func utilWriteCode(path string, sb *strings.Builder) (string, error) {
 	base := filepath.Base(path)
 	suffix := filepath.Ext(base)
 	base = strings.TrimSuffix(base, suffix)
 
-	if _, err := os.Stat(OutputDir); err != nil {
-		fmt.Printf("creating output directory \"%v\"\n", OutputDir)
-
-		if err := os.Mkdir(OutputDir, os.ModePerm); err != nil {
-			fmt.Printf("error creating output directory \"%v\": %v\n", OutputDir, err.Error())
-			os.Exit(1)
-		}
+	if err := utilCreateDir(OutputDir); err != nil {
+		fmt.Printf("error creating output directory \"%v\": %v\n", OutputDir, err.Error())
+		os.Exit(1)
 	}
 
 	output := fmt.Sprintf("./%v/%v.i", OutputDir, base)
