@@ -15,6 +15,8 @@ import (
 
 const OutputDir = "out"
 
+const GccLinkerFlags = "-lm"
+
 func utilCreateDir(dirPath string) error {
 	if _, err := os.Stat(dirPath); err != nil {
 		fmt.Printf("creating output directory \"%v\"\n", dirPath)
@@ -82,7 +84,7 @@ func EndToEndC(path string) {
 	start := time.Now()
 
 	gccStart := time.Now()
-	_, err = exec.Command("gcc", compiled, "-o", "bin").CombinedOutput()
+	_, err = exec.Command("gcc", compiled, GccLinkerFlags, "-o", "bin").CombinedOutput()
 	if err != nil {
 		fmt.Printf("error compiling: %v\n", err.Error())
 	}
@@ -109,5 +111,5 @@ func Ape(opts ApeOpts) {
 	env := types.NewChecker(file).Check()
 	code := c.GenerateCode(file.Ast, env)
 	compiled, _ := utilWriteCode(opts.Src, code.Code)
-	exec.Command("gcc", compiled, "-o", opts.Out).Run()
+	exec.Command("gcc", compiled, GccLinkerFlags, "-o", opts.Out).Run()
 }
