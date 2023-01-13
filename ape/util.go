@@ -13,11 +13,31 @@ import (
 	"github.com/pcen/ape/ape/types"
 )
 
+const OutputDir = "out"
+
+func utilCreateDir(dirPath string) error {
+	if _, err := os.Stat(dirPath); err != nil {
+		fmt.Printf("creating output directory \"%v\"\n", dirPath)
+
+		if err := os.Mkdir(dirPath, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func utilWriteCode(path string, sb *strings.Builder) (string, error) {
 	base := filepath.Base(path)
 	suffix := filepath.Ext(base)
 	base = strings.TrimSuffix(base, suffix)
-	output := fmt.Sprintf("./out/%v.i", base)
+
+	if err := utilCreateDir(OutputDir); err != nil {
+		fmt.Printf("error creating output directory \"%v\": %v\n", OutputDir, err.Error())
+		os.Exit(1)
+	}
+
+	output := fmt.Sprintf("./%v/%v.i", OutputDir, base)
 	return output, os.WriteFile(output, []byte(sb.String()), 0664)
 }
 
