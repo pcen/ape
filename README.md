@@ -1,5 +1,7 @@
 # ape programming language
 
+Humans (_Homo Sapiens_) are the most abundant and widespread species of primate. They are a type of Great Ape (_Hominidae_).
+
 ## compile a program
 - run `go run main.go ./tests/<source file>.ape`
 - check the generated c code in `./out/<source file>.i`
