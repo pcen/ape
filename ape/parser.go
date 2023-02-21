@@ -416,16 +416,26 @@ func (p *parser) BlockStmt() *ast.BlockStmt {
 }
 
 func (p *parser) SwitchStmt() *ast.SwitchStmt {
-	// TODO: make sure that there is only 1 default case in the switch statement
 	stmt := &ast.SwitchStmt{Cases: make([]*ast.CaseStmt, 0)}
 	p.consume(token.Switch, "switch stmt start")
 	stmt.Token = p.prev()
-	stmt.Expr = p.Expression()
+	if !p.peekIs(token.OpenBrace) {
+		stmt.Expr = p.Expression()
+	}
 	p.consume(token.OpenBrace, "switch stmt open brace")
 	for p.peekIs(token.Case, token.Default) {
 		stmt.Cases = append(stmt.Cases, p.CaseStmt())
 	}
 	p.consume(token.CloseBrace, "switch stmt end")
+	hasDefault := false
+	for _, c := range stmt.Cases {
+		if c.Token.Kind == token.Default {
+			if hasDefault {
+				p.err("switch statement has multiple default cases")
+			}
+			hasDefault = true
+		}
+	}
 	return stmt
 }
 

@@ -111,3 +111,26 @@ func paramDeclsStr(pds []*ParamDecl) string {
 	}
 	return sb.String()
 }
+
+func NewPrint(ast []Declaration) {
+	level := 0
+	indent := func(lvl int) {
+		fmt.Print(strings.Repeat("  ", lvl))
+	}
+	fn := func(node Node) bool {
+		indent(level)
+		switch node.(type) {
+		case *FuncDecl:
+			fmt.Println("FUNC")
+			return false
+		case *ClassDecl:
+			fmt.Println("CLASS")
+			return false
+		default:
+			return true
+		}
+	}
+	for _, d := range ast {
+		Walk(d, fn)
+	}
+}

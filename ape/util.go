@@ -61,6 +61,8 @@ func utilCompile(path string) (string, error) {
 		return "", fmt.Errorf("parser error(s): %v", errs)
 	}
 
+	ast.NewPrint(file.Ast)
+
 	checker := types.NewChecker(file)
 	env := checker.Check()
 

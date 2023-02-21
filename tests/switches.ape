@@ -21,4 +21,12 @@ func main(argv []string) {
 	default:
 		println(999)
 	}
+
+	a := 10
+	switch {
+	case a == 10:
+		println(10)
+	default:
+		println(-1)
+	}
 }

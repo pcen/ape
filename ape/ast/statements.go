@@ -142,7 +142,11 @@ type SwitchStmt struct {
 
 func (s *SwitchStmt) StmtStr() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("(switch %v\n", s.Expr.ExprStr()))
+	sb.WriteString("(switch")
+	if s.Expr != nil {
+		sb.Write([]byte(fmt.Sprint(" ", s.Expr.ExprStr())))
+	}
+	sb.WriteString(")\n")
 	for _, c := range s.Cases {
 		sb.WriteString(fmt.Sprintf("\t%v\n", c.StmtStr()))
 	}
@@ -163,7 +167,7 @@ func (s *CaseStmt) StmtStr() string {
 	return "(default case)"
 }
 
-type FallthroughtStmt struct{}
+type FallthroughtStmt struct{} // TODO: remove? fallthrough is dumb anyways
 
 func (s *FallthroughtStmt) StmtStr() string {
 	return "fallthrough"

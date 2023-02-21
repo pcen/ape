@@ -72,16 +72,22 @@ func (c *Checker) CheckStatement(stmt ast.Statement) {
 		break
 
 	case *ast.SwitchStmt:
-		t := c.CheckExpr(s.Expr)
-		if _, ok := t.(Primitive); !ok {
-			c.err(s.Token.Position, "invalid type for switch value: %v", t)
+		var t Type = Bool
+		if s.Expr != nil {
+			// switch on expression
+			t = c.CheckExpr(s.Expr)
+			if _, ok := t.(Primitive); !ok {
+				c.err(s.Token.Position, "invalid type for switch value: %v", t)
+			}
 		}
 		for _, caseStmt := range s.Cases {
-			c.CheckStatement(caseStmt)
+			if caseStmt.Token.Kind != token.Default {
+				if ct := c.CheckExpr(caseStmt.Expr); !ct.Is(t) {
+					c.err(caseStmt.Token.Position, "type of case expression does not match expression being switched on")
+				}
+			}
+			c.CheckStatement(caseStmt.Body)
 		}
-
-	case *ast.CaseStmt:
-		c.CheckStatement(s.Body)
 
 	case *ast.FallthroughtStmt:
 		break
