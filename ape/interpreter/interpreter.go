@@ -13,17 +13,18 @@ type Interpreter interface {
 }
 
 type TWI struct {
-	GlobalScope Scope
+	GlobalScope  Scope
+	CurrentScope Scope
 }
 
 // TODO: Temp for testing
 func (twi *TWI) Interpret(expr ast.Expression) {
-	res := twi.evaluate(expr)
+	res := twi.evaluateExpr(expr)
 	fmt.Println(res)
 }
 
 /** === Expression Code Begins ==== */
-func (twi *TWI) evaluate(expr ast.Expression) value {
+func (twi *TWI) evaluateExpr(expr ast.Expression) value {
 	switch t := expr.(type) {
 	case *ast.LiteralExpr:
 		return twi.visitLiteralExpr(t)
@@ -57,8 +58,8 @@ func (twi *TWI) visitLiteralExpr(literal *ast.LiteralExpr) value {
 
 // TODO: Handle the equal expressions (+=, -=, etc...)
 func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
-	lv := twi.evaluate(bin.Lhs)
-	rv := twi.evaluate(bin.Rhs)
+	lv := twi.evaluateExpr(bin.Lhs)
+	rv := twi.evaluateExpr(bin.Rhs)
 
 	switch bin.Op.Kind {
 	case token.Plus:
@@ -100,7 +101,7 @@ func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
 }
 
 func (twi *TWI) visitUnaryExpr(unary *ast.UnaryOp) value {
-	val := twi.evaluate(unary.Expr)
+	val := twi.evaluateExpr(unary.Expr)
 
 	switch unary.Op {
 	case token.Bang:
@@ -111,7 +112,7 @@ func (twi *TWI) visitUnaryExpr(unary *ast.UnaryOp) value {
 }
 
 func (twi *TWI) visitGroupExpr(group *ast.GroupExpr) value {
-	return twi.evaluate(group.Expr)
+	return twi.evaluateExpr(group.Expr)
 }
 
 /** === Expression Code Ends ==== */

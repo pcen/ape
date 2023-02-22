@@ -15,11 +15,12 @@ type Scoped interface {
 type Scope struct {
 	Enclosing *Scope
 
-	Values map[string]types.Type // Vars declared within this scope
+	// TODO: Should be interpreter/value.go
+	Values map[string]value
 }
 
 /** Travel up scopes looking for given identifier. */
-func (s *Scope) Get(name string) types.Type {
+func (s *Scope) Get(name string) value {
 	val, exists := s.Values[name]
 	if exists {
 		return val
@@ -33,20 +34,20 @@ func (s *Scope) Get(name string) types.Type {
 }
 
 /** Travel up scopes looking for given identifier to assign to. */
-func (s *Scope) Set(name string, value types.Type) {
+func (s *Scope) Set(name string, val value) {
 	if _, exists := s.Values[name]; exists {
-		s.Values[name] = value
+		s.Values[name] = val
 		return
 	}
 
 	if s.Enclosing != nil {
-		s.Enclosing.Set(name, value)
+		s.Enclosing.Set(name, val)
 	}
 
 	panic(fmt.Sprintf("Failed to find variable with name: %s", name))
 }
 
 /** Assign identifier with given value at this scope */
-func (s *Scope) Define(name string, value types.Type) {
-	s.Values[name] = value
+func (s *Scope) Define(name string, val value) {
+	s.Values[name] = val
 }

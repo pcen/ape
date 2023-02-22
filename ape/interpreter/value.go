@@ -23,6 +23,12 @@ type number interface {
 	GreaterThanEq(number) val_bool
 }
 
+//TODO: List
+// type val_list[T value] struct {
+// 	Size int
+// 	Data []T
+// }
+
 type val_bool struct {
 	Value bool
 }
