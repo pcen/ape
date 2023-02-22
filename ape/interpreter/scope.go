@@ -15,8 +15,20 @@ type Scoped interface {
 type Scope struct {
 	Enclosing *Scope
 
-	// TODO: Should be interpreter/value.go
 	Values map[string]value
+}
+
+/** Utility to make a scope before entering a function */
+func MakeFnScope(enclosing *Scope, vals []value, param_names []string) Scope {
+	v_map := make(map[string]value)
+	for i, v := range vals {
+		v_map[param_names[i]] = v
+	}
+
+	return Scope{
+		Enclosing: enclosing,
+		Values:    v_map,
+	}
 }
 
 /** Travel up scopes looking for given identifier. */

@@ -13,27 +13,58 @@ type Interpreter interface {
 }
 
 type TWI struct {
-	GlobalScope  Scope
-	CurrentScope Scope
+	GlobalScope  *Scope
+	CurrentScope *Scope
 }
 
-// TODO: Temp for testing
-func (twi *TWI) Interpret(expr ast.Expression) {
-	res := twi.evaluateExpr(expr)
-	fmt.Println(res)
+func NewTWI() *TWI {
+	scope := &Scope{
+		Enclosing: nil,
+		Values:    make(map[string]value),
+	}
+	return &TWI{
+		GlobalScope:  scope,
+		CurrentScope: scope,
+	}
 }
+
+// ==== TODO: Temp for testing ====
+func (twi *TWI) Interpret(decl ast.Declaration) {
+	twi.executeDecl(decl)
+}
+
+func (twi *TWI) RunMain() {
+
+	println("STATE OF GLOBALS")
+	for k, v := range twi.GlobalScope.Values {
+		println(fmt.Sprintf("KEY %s VALUE %+v", k, v.(val_func)))
+	}
+
+	call_expr := ast.CallExpr{
+		Callee: ast.NewLiteralExpr(token.NewLexeme(token.String, "main", token.Position{1, 1})),
+		Args:   []ast.Expression{},
+	}
+	resp := twi.evaluateExpr(&call_expr)
+	println(resp.(val_int).Value)
+}
+
+// ====== TESTING =====
 
 /** === Expression Code Begins ==== */
 func (twi *TWI) evaluateExpr(expr ast.Expression) value {
 	switch t := expr.(type) {
 	case *ast.LiteralExpr:
 		return twi.visitLiteralExpr(t)
+	case *ast.IdentExpr:
+		return twi.visitIdentExpr(t)
 	case *ast.BinaryOp:
 		return twi.visitBinaryExpr(t)
 	case *ast.GroupExpr:
 		return twi.visitGroupExpr(t)
+	case *ast.CallExpr:
+		return twi.visitCallExpr(t)
 	default:
-		panic(fmt.Sprintf("Expression type cannot be evaluated: %s", t))
+		panic(fmt.Sprintf("Expression type cannot be evaluated: %+v", t))
 	}
 }
 
@@ -54,6 +85,10 @@ func (twi *TWI) visitLiteralExpr(literal *ast.LiteralExpr) value {
 	default:
 		panic(fmt.Sprintf("Unknown literal expression kind: %s", literal.Kind))
 	}
+}
+
+func (twi *TWI) visitIdentExpr(ident *ast.IdentExpr) value {
+	return val_str{ident.Ident.Lexeme}
 }
 
 // TODO: Handle the equal expressions (+=, -=, etc...)
@@ -115,4 +150,102 @@ func (twi *TWI) visitGroupExpr(group *ast.GroupExpr) value {
 	return twi.evaluateExpr(group.Expr)
 }
 
-/** === Expression Code Ends ==== */
+func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
+	// Resolved value we are calling
+	// Could be other_fn() or something more convoluted:
+	// fn_generator("hello")(" Alex") AKA call a fn returned from a fn
+	callee := twi.evaluateExpr(expr.Callee)
+
+	// Evaluate all the arguments
+	args := []value{}
+	for _, arg := range expr.Args {
+		args = append(args, twi.evaluateExpr(arg))
+	}
+
+	switch t := callee.(type) {
+	case val_str:
+		fn_name := t.Value
+		fn := twi.CurrentScope.Get(fn_name).(val_func)
+		fn_scope := MakeFnScope(twi.GlobalScope, args, fn.Params)
+
+		fmt.Println("CALLING: ", fn_name)
+
+		defer func() {
+			ret_val := recover()
+			if ret_val != nil {
+				println(ret_val)
+				return_val = ret_val.(value) // Use named return to update on panic
+			} else {
+				return_val = val_void{}
+			}
+		}()
+		twi.visitBlockStmt(&fn_scope, fn.Body)
+		return val_void{}
+
+	default:
+		panic(fmt.Sprintf("Trying to call a non function: %s", t))
+	}
+}
+
+/** === Expression Code Ends === */
+
+/** === Statement Code Begins === */
+func (twi *TWI) executeStmt(stmt ast.Statement) {
+	switch t := stmt.(type) {
+	case *ast.BlockStmt:
+		twi.visitBlockStmt(&Scope{twi.CurrentScope, make(map[string]value)}, t)
+	case *ast.ReturnStmt:
+		twi.visitReturnStmt(t)
+	case *ast.ExprStmt:
+		twi.evaluateExpr(t.Expr)
+	}
+}
+
+func (twi *TWI) visitBlockStmt(scope *Scope, stmt *ast.BlockStmt) {
+	prev_scope := twi.CurrentScope
+	twi.CurrentScope = scope
+
+	for _, s := range stmt.Content {
+		twi.executeStmt(s)
+	}
+
+	twi.CurrentScope = prev_scope
+}
+
+/**
+This may be a little confusing. We need to stop execution and return to the caller
+of the function on a return stmt so we panic with the value. In visitCallExpr you will
+see how this value is used.
+*/
+func (twi *TWI) visitReturnStmt(ret *ast.ReturnStmt) {
+	val := twi.evaluateExpr(ret.Expr)
+	panic(val)
+}
+
+/** === Statement Code Ends === */
+
+/** === Declaration Code Begins === */
+func (twi *TWI) executeDecl(decl ast.Declaration) {
+	switch t := decl.(type) {
+	case *ast.FuncDecl:
+		twi.visitFuncDecl(t)
+	}
+}
+
+func (twi *TWI) visitFuncDecl(fn_decl *ast.FuncDecl) {
+	param_names := []string{}
+
+	for _, p := range fn_decl.Params {
+		param_names = append(param_names, p.Ident.ExprStr())
+	}
+
+	fn := val_func{
+		Name:   fn_decl.Name.Lexeme,
+		Params: param_names,
+		Body:   fn_decl.Body,
+	}
+
+	twi.CurrentScope.Values[fn.Name] = fn
+}
+
+/** === Declaration Code Ends === */

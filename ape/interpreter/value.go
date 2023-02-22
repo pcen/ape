@@ -3,11 +3,41 @@ package interpreter
 import (
 	"fmt"
 	"math"
+
+	"github.com/pcen/ape/ape/ast"
 )
 
 /** Base interface of all values */
 type value interface {
 	Equals(value) bool
+}
+
+/** Represents nothing. Ex. no return from a func */
+type val_void struct{}
+
+func (v val_void) Equals(other value) bool {
+	switch other.(type) {
+	case val_void:
+		return true
+	default:
+		return false
+	}
+}
+
+/** Internal representation of a function. First class citizen */
+type val_func struct {
+	Name   string
+	Params []string
+	Body   *ast.BlockStmt
+}
+
+func (fn val_func) Equals(other value) bool {
+	switch other.(type) {
+	case val_func:
+		return (fn.Name == other.(val_func).Name)
+	default:
+		return false // Impossible with type checking
+	}
 }
 
 /** Interface for both Integers and Rationals*/

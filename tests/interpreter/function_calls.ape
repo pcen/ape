@@ -1,0 +1,7 @@
+func add_two() int {
+	return 2 + 2
+}
+
+func main() int {
+	return add_two() * 37
+}
