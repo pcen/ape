@@ -124,6 +124,10 @@ func (v val_int) Power(other number) number {
 	}
 }
 
+func (v val_int) Mod(other val_int) val_int {
+	return val_int{v.Value % other.Value}
+}
+
 func (v val_int) LessThan(other number) val_bool {
 	switch t := other.(type) {
 	case val_int:

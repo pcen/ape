@@ -29,6 +29,8 @@ func (twi *TWI) evaluate(expr ast.Expression) value {
 		return twi.visitLiteralExpr(t)
 	case *ast.BinaryOp:
 		return twi.visitBinaryExpr(t)
+	case *ast.GroupExpr:
+		return twi.visitGroupExpr(t)
 	default:
 		panic(fmt.Sprintf("Expression type cannot be evaluated: %s", t))
 	}
@@ -74,6 +76,8 @@ func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
 		return lv.(number).Divide(rv.(number)).(value)
 	case token.Power:
 		return lv.(number).Power(rv.(number)).(value)
+	case token.Mod:
+		return lv.(val_int).Mod(rv.(val_int))
 	case token.Less:
 		return lv.(number).LessThan(rv.(number))
 	case token.LessEq:
@@ -86,9 +90,28 @@ func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
 		return val_bool{lv.Equals(rv)}
 	case token.NotEqual:
 		return val_bool{!lv.Equals(rv)}
+	case token.And:
+		return val_bool{lv.(val_bool).Value && rv.(val_bool).Value}
+	case token.Or:
+		return val_bool{lv.(val_bool).Value || rv.(val_bool).Value}
 	}
 
 	panic(fmt.Sprintf("Unknown binary operation: %s", bin.Op.Kind))
+}
+
+func (twi *TWI) visitUnaryExpr(unary *ast.UnaryOp) value {
+	val := twi.evaluate(unary.Expr)
+
+	switch unary.Op {
+	case token.Bang:
+		return val_bool{!val.(val_bool).Value}
+	default:
+		panic("Unknown unary token")
+	}
+}
+
+func (twi *TWI) visitGroupExpr(group *ast.GroupExpr) value {
+	return twi.evaluate(group.Expr)
 }
 
 /** === Expression Code Ends ==== */
