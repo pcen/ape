@@ -4,4 +4,5 @@ func add_two() int {
 
 func main() int {
 	return add_two() * 37
+	return 1
 }
