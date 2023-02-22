@@ -16,15 +16,22 @@ type TWI struct {
 	GlobalScope Scope
 }
 
-/** === Expression Code Begins ==== */
+// TODO: Temp for testing
+func (twi *TWI) Interpret(expr ast.Expression) {
+	res := twi.evaluate(expr)
+	fmt.Println(res)
+}
 
+/** === Expression Code Begins ==== */
 func (twi *TWI) evaluate(expr ast.Expression) value {
 	switch t := expr.(type) {
 	case *ast.LiteralExpr:
-		twi.visitLiteralExpr(t)
+		return twi.visitLiteralExpr(t)
+	case *ast.BinaryOp:
+		return twi.visitBinaryExpr(t)
+	default:
+		panic(fmt.Sprintf("Expression type cannot be evaluated: %s", t))
 	}
-
-	panic("Expression type cannot be evaluated")
 }
 
 func (twi *TWI) visitLiteralExpr(literal *ast.LiteralExpr) value {
@@ -46,51 +53,42 @@ func (twi *TWI) visitLiteralExpr(literal *ast.LiteralExpr) value {
 	}
 }
 
-// TODO: Handle the OP= expressions (+=, -=, etc...)
-func (twi *TWI) visitBinaryExpr(bin ast.BinaryOp) value {
+// TODO: Handle the equal expressions (+=, -=, etc...)
+func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
 	lv := twi.evaluate(bin.Lhs)
 	rv := twi.evaluate(bin.Rhs)
 
 	switch bin.Op.Kind {
 	case token.Plus:
 		switch lv.(type) {
-		case val_int:
-			l, r := cast_value[val_int](lv, rv)
-			return val_int{l.Value + r.Value}
-		case val_rational:
-			l, r := cast_value[val_rational](lv, rv)
-			return val_rational{l.Value + r.Value}
 		case val_str:
-			l, r := cast_value[val_str](lv, rv)
-			return val_str{l.Value + r.Value}
+			return val_str{lv.(val_str).Value + rv.(val_str).Value}
+		default:
+			return lv.(number).Add(rv.(number)).(value) // Typechecked: we know this is a number
 		}
-
 	case token.Minus:
-		switch lv.(type) {
-		case val_int:
-			l, r := cast_value[val_int](lv, rv)
-			return val_int{l.Value + r.Value}
-		case val_rational:
-			l, r := cast_value[val_rational](lv, rv)
-			return val_rational{l.Value + r.Value}
-		}
+		return lv.(number).Subtract(rv.(number)).(value)
 	case token.Star:
+		return lv.(number).Multiply(rv.(number)).(value)
 	case token.Divide:
+		return lv.(number).Divide(rv.(number)).(value)
 	case token.Power:
-	case token.Equal:
-	case token.NotEqual:
+		return lv.(number).Power(rv.(number)).(value)
 	case token.Less:
+		return lv.(number).LessThan(rv.(number))
 	case token.LessEq:
+		return lv.(number).LessThanEq(rv.(number))
 	case token.Greater:
+		return lv.(number).GreaterThan(rv.(number))
 	case token.GreaterEq:
+		return lv.(number).GreaterThanEq(rv.(number))
+	case token.Equal:
+		return val_bool{lv.Equals(rv)}
+	case token.NotEqual:
+		return val_bool{!lv.Equals(rv)}
 	}
 
 	panic(fmt.Sprintf("Unknown binary operation: %s", bin.Op.Kind))
-}
-
-/** == Expression Utilities == */
-func cast_value[T value](a value, b value) (T, T) {
-	return a.(T), b.(T)
 }
 
 /** === Expression Code Ends ==== */
