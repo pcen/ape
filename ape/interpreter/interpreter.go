@@ -171,16 +171,15 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		fmt.Println("CALLING: ", fn_name)
 
 		defer func() {
-			ret_val := recover()
-			if ret_val != nil {
+			if ret_val := recover(); ret_val != nil {
 				switch ret_val.(type) {
-				case *value:
+				case value:
+					return_val = ret_val.(value) // Use named return to update on panic
+					return
 				}
-				println(ret_val)
-				return_val = ret_val.(value) // Use named return to update on panic
-			} else {
-				return_val = val_void{}
+				panic(ret_val)
 			}
+			return_val = val_void{}
 		}()
 		twi.visitBlockStmt(&fn_scope, fn.Body)
 		return val_void{}
