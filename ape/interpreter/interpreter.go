@@ -34,12 +34,6 @@ func (twi *TWI) Interpret(decl ast.Declaration) {
 }
 
 func (twi *TWI) RunMain() {
-
-	println("STATE OF GLOBALS")
-	for k, v := range twi.GlobalScope.Values {
-		println(fmt.Sprintf("KEY %s VALUE %+v", k, v.(val_func)))
-	}
-
 	call_expr := ast.CallExpr{
 		Callee: ast.NewLiteralExpr(token.NewLexeme(token.String, "main", token.Position{1, 1})),
 		Args:   []ast.Expression{},
