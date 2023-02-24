@@ -85,7 +85,8 @@ func (s val_str) Equals(other value) bool {
 	}
 }
 
-/**
+/*
+*
 Maybe all numbers should be contained within one struct to reduce the
 duplication of operations seen below. Everything could be in the highest precision
 float possible and then just when accessing the value we could round up and down.
