@@ -86,7 +86,6 @@ func (twi *TWI) visitIdentExpr(ident *ast.IdentExpr) value {
 	return twi.CurrentScope.Get(ident.Ident.Lexeme)
 }
 
-// TODO: Handle the equal expressions (+=, -=, etc...)
 func (twi *TWI) visitBinaryExpr(bin *ast.BinaryOp) value {
 	lv := twi.evaluateExpr(bin.Lhs)
 	rv := twi.evaluateExpr(bin.Rhs)
@@ -189,6 +188,8 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 /** === Statement Code Begins === */
 func (twi *TWI) executeStmt(stmt ast.Statement) {
 	switch t := stmt.(type) {
+	case *ast.ForStmt:
+		twi.visitForStmt(t)
 	case *ast.BlockStmt:
 		twi.visitBlockStmt(&Scope{twi.CurrentScope, make(map[string]value)}, t)
 	case *ast.IfStmt:
@@ -201,6 +202,16 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 		twi.executeDecl(t.Decl)
 	case *ast.AssignmentStmt:
 		twi.visitAssignmentStmt(t)
+	case *ast.IncStmt:
+		twi.visitIncStmt(t)
+	}
+}
+
+func (twi *TWI) visitForStmt(stmt *ast.ForStmt) {
+	twi.executeDecl(stmt.Init) // Initializes far in local scope
+	for twi.evaluateExpr(stmt.Cond).(val_bool).Value {
+		twi.executeStmt(stmt.Body)
+		twi.executeStmt(stmt.Incr)
 	}
 }
 
@@ -209,7 +220,6 @@ func (twi *TWI) visitBlockStmt(scope *Scope, stmt *ast.BlockStmt) {
 	twi.CurrentScope = scope
 
 	// Must reset the scope even if we encounter a panic
-	//
 	defer func() {
 		twi.CurrentScope = prev_scope
 	}()
@@ -228,7 +238,7 @@ func (twi *TWI) visitIfStmt(stmt *ast.IfStmt) {
 		return
 	}
 
-	// If was false, iterate through elifs now
+	// Was false. Iterate through elifs now
 	for _, elif := range stmt.Elifs {
 		result = twi.evaluateExpr(elif.Cond).(val_bool)
 		if result.Value {
@@ -260,6 +270,21 @@ func (twi *TWI) visitAssignmentStmt(stmt *ast.AssignmentStmt) {
 	twi.CurrentScope.Set(stmt.Lhs.ExprStr(), twi.evaluateExpr(stmt.Rhs))
 }
 
+func (twi *TWI) visitIncStmt(inc *ast.IncStmt) {
+	val := twi.evaluateExpr(inc.Expr).(number)
+	switch inc.Op.Kind {
+	case token.Increment:
+		val = val.Add(val_int{1})
+	case token.Decrement:
+		val = val.Subtract(val_int{1})
+	}
+
+	switch t := inc.Expr.(type) {
+	case *ast.IdentExpr:
+		twi.CurrentScope.Set(t.Ident.Lexeme, val.(value))
+	}
+}
+
 /** === Statement Code Ends === */
 
 /** === Declaration Code Begins === */
@@ -285,7 +310,7 @@ func (twi *TWI) visitFuncDecl(fn_decl *ast.FuncDecl) {
 		Body:   fn_decl.Body,
 	}
 
-	twi.CurrentScope.Values[fn.Name] = fn
+	twi.CurrentScope.Define(fn.Name, fn)
 }
 
 func (twi *TWI) visitVarDecl(var_decl *ast.VarDecl) {
