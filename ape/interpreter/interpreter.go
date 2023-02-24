@@ -35,7 +35,7 @@ func (twi *TWI) Interpret(decl ast.Declaration) {
 
 func (twi *TWI) RunMain() {
 	call_expr := ast.CallExpr{
-		Callee: ast.NewLiteralExpr(token.NewLexeme(token.String, "main", token.Position{1, 1})),
+		Callee: ast.NewIdentExpr(token.NewLexeme(token.Identifier, "main", token.Position{1, 1})),
 		Args:   []ast.Expression{},
 	}
 	resp := twi.evaluateExpr(&call_expr)
@@ -82,7 +82,8 @@ func (twi *TWI) visitLiteralExpr(literal *ast.LiteralExpr) value {
 }
 
 func (twi *TWI) visitIdentExpr(ident *ast.IdentExpr) value {
-	return val_str{ident.Ident.Lexeme}
+	// pprintScope(twi.CurrentScope)
+	return twi.CurrentScope.Get(ident.Ident.Lexeme)
 }
 
 // TODO: Handle the equal expressions (+=, -=, etc...)
@@ -156,10 +157,9 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		args = append(args, twi.evaluateExpr(arg))
 	}
 
-	switch t := callee.(type) {
-	case val_str:
-		fn_name := t.Value
-		fn := twi.CurrentScope.Get(fn_name).(val_func)
+	switch fn := callee.(type) {
+	case val_func:
+		fn_name := fn.Name
 		fn_scope := MakeFnScope(twi.GlobalScope, args, fn.Params)
 
 		fmt.Println("CALLING: ", fn_name)
@@ -180,7 +180,7 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		return val_void{}
 
 	default:
-		panic(fmt.Sprintf("Trying to call a non function: %s", t))
+		panic(fmt.Sprintf("Trying to call a non function: %s", fn))
 	}
 }
 
@@ -197,6 +197,10 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 		twi.visitReturnStmt(t)
 	case *ast.ExprStmt:
 		twi.evaluateExpr(t.Expr)
+	case *ast.TypedDeclStmt:
+		twi.executeDecl(t.Decl)
+	case *ast.AssignmentStmt:
+		twi.visitAssignmentStmt(t)
 	}
 }
 
@@ -204,11 +208,16 @@ func (twi *TWI) visitBlockStmt(scope *Scope, stmt *ast.BlockStmt) {
 	prev_scope := twi.CurrentScope
 	twi.CurrentScope = scope
 
+	// Must reset the scope even if we encounter a panic
+	//
+	defer func() {
+		twi.CurrentScope = prev_scope
+	}()
+
 	for _, s := range stmt.Content {
 		twi.executeStmt(s)
 	}
 
-	twi.CurrentScope = prev_scope
 }
 
 func (twi *TWI) visitIfStmt(stmt *ast.IfStmt) {
@@ -234,7 +243,8 @@ func (twi *TWI) visitIfStmt(stmt *ast.IfStmt) {
 	}
 }
 
-/**
+/*
+*
 This may be a little confusing. We need to stop execution and return to the caller
 of the function on a return stmt so we panic with the value. In visitCallExpr you will
 see how this value is used.
@@ -244,6 +254,12 @@ func (twi *TWI) visitReturnStmt(ret *ast.ReturnStmt) {
 	panic(val)
 }
 
+func (twi *TWI) visitAssignmentStmt(stmt *ast.AssignmentStmt) {
+	// TODO: This only works for simple name assignments
+
+	twi.CurrentScope.Set(stmt.Lhs.ExprStr(), twi.evaluateExpr(stmt.Rhs))
+}
+
 /** === Statement Code Ends === */
 
 /** === Declaration Code Begins === */
@@ -251,6 +267,8 @@ func (twi *TWI) executeDecl(decl ast.Declaration) {
 	switch t := decl.(type) {
 	case *ast.FuncDecl:
 		twi.visitFuncDecl(t)
+	case *ast.VarDecl:
+		twi.visitVarDecl(t)
 	}
 }
 
@@ -268,6 +286,13 @@ func (twi *TWI) visitFuncDecl(fn_decl *ast.FuncDecl) {
 	}
 
 	twi.CurrentScope.Values[fn.Name] = fn
+}
+
+func (twi *TWI) visitVarDecl(var_decl *ast.VarDecl) {
+	scope := twi.CurrentScope
+	scope.Define(var_decl.Ident.Lexeme, twi.evaluateExpr(var_decl.Value))
+
+	// pprintScope(twi.CurrentScope)
 }
 
 /** === Declaration Code Ends === */

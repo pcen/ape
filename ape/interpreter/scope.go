@@ -54,6 +54,7 @@ func (s *Scope) Set(name string, val value) {
 
 	if s.Enclosing != nil {
 		s.Enclosing.Set(name, val)
+		return
 	}
 
 	panic(fmt.Sprintf("Failed to find variable with name: %s", name))
@@ -62,4 +63,18 @@ func (s *Scope) Set(name string, val value) {
 /** Assign identifier with given value at this scope */
 func (s *Scope) Define(name string, val value) {
 	s.Values[name] = val
+}
+
+/** For Debugging */
+func pprintScope(s *Scope) {
+	nested := 0
+	for s != nil {
+		fmt.Printf("Level: %d \n", nested)
+		for k, v := range s.Values {
+			fmt.Print(k, " :=", v)
+		}
+		println(";")
+		nested += 1
+		s = s.Enclosing
+	}
 }
