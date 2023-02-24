@@ -3,5 +3,9 @@ func add_two() int {
 }
 
 func main() int {
-	return add_two() * 37
+	if 11*3 + 6 == 39 {
+		return add_two() * 37
+	} else {
+		return 1
+	}
 }

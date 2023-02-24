@@ -175,6 +175,7 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 			}
 			return_val = val_void{}
 		}()
+
 		twi.visitBlockStmt(&fn_scope, fn.Body)
 		return val_void{}
 
@@ -190,6 +191,8 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 	switch t := stmt.(type) {
 	case *ast.BlockStmt:
 		twi.visitBlockStmt(&Scope{twi.CurrentScope, make(map[string]value)}, t)
+	case *ast.IfStmt:
+		twi.visitIfStmt(t)
 	case *ast.ReturnStmt:
 		twi.visitReturnStmt(t)
 	case *ast.ExprStmt:
@@ -206,6 +209,29 @@ func (twi *TWI) visitBlockStmt(scope *Scope, stmt *ast.BlockStmt) {
 	}
 
 	twi.CurrentScope = prev_scope
+}
+
+func (twi *TWI) visitIfStmt(stmt *ast.IfStmt) {
+	result := twi.evaluateExpr(stmt.If.Cond).(val_bool)
+
+	if result.Value {
+		twi.executeStmt(stmt.If.Body)
+		return
+	}
+
+	// If was false, iterate through elifs now
+	for _, elif := range stmt.Elifs {
+		result = twi.evaluateExpr(elif.Cond).(val_bool)
+		if result.Value {
+			twi.executeStmt(elif.Body)
+			return
+		}
+	}
+
+	// Else stmt could be nil
+	if stmt.Else != nil {
+		twi.executeStmt(stmt.Else)
+	}
 }
 
 /**
