@@ -1,0 +1,5 @@
+func main() int {
+	name := "Alex"
+	println("Hello there, " + name)
+	return 1
+}
