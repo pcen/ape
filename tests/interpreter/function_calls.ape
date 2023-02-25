@@ -4,7 +4,7 @@ func is_prime(num int) bool {
 	} elif num == 2 {
 		return true
 	} else {
-		for i := 2; i**2 < num / 2; i++ {
+		for i := 2; i**2 < num; i++ {
 			if num % i == 0 {
 				return false
 			}
