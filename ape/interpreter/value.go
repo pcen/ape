@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/pcen/ape/ape/ast"
 )
@@ -10,6 +11,7 @@ import (
 /** Base interface of all values */
 type value interface {
 	Equals(value) bool
+	ToString() string
 }
 
 /** Represents nothing. Ex. no return from a func */
@@ -22,6 +24,25 @@ func (v val_void) Equals(other value) bool {
 	default:
 		return false
 	}
+}
+
+func (v val_void) ToString() string {
+	return "VOID"
+}
+
+type val_native_func struct {
+	Name   string
+	Params []string
+	Fn     func(*Scope) value
+}
+
+// Pointless
+func (vnf val_native_func) Equals(other value) bool {
+	return false
+}
+
+func (vnf val_native_func) ToString() string {
+	return "NATIVE: " + vnf.Name
 }
 
 /** Internal representation of a function. First class citizen */
@@ -40,17 +61,8 @@ func (fn val_func) Equals(other value) bool {
 	}
 }
 
-/** Interface for both Integers and Rationals*/
-type number interface {
-	Add(number) number
-	Subtract(number) number
-	Multiply(number) number
-	Divide(number) number
-	Power(number) number
-	LessThan(number) val_bool
-	LessThanEq(number) val_bool
-	GreaterThan(number) val_bool
-	GreaterThanEq(number) val_bool
+func (v val_func) ToString() string {
+	return "FUNC: " + v.Name
 }
 
 //TODO: List
@@ -72,6 +84,14 @@ func (b val_bool) Equals(other value) bool {
 	}
 }
 
+func (b val_bool) ToString() string {
+	if b.Value {
+		return "True"
+	} else {
+		return "False"
+	}
+}
+
 type val_str struct {
 	Value string
 }
@@ -83,6 +103,23 @@ func (s val_str) Equals(other value) bool {
 	default:
 		return false
 	}
+}
+
+func (s val_str) ToString() string {
+	return s.Value
+}
+
+/** Interface for both Integers and Rationals*/
+type number interface {
+	Add(number) number
+	Subtract(number) number
+	Multiply(number) number
+	Divide(number) number
+	Power(number) number
+	LessThan(number) val_bool
+	LessThanEq(number) val_bool
+	GreaterThan(number) val_bool
+	GreaterThanEq(number) val_bool
 }
 
 /*
@@ -104,6 +141,10 @@ func (v val_int) Equals(other value) bool {
 	default:
 		return false
 	}
+}
+
+func (v val_int) ToString() string {
+	return strconv.FormatInt(int64(v.Value), 10)
 }
 
 func (v val_int) Add(other number) number {
@@ -220,6 +261,10 @@ func (v val_rational) Equals(other value) bool {
 	default:
 		return false
 	}
+}
+
+func (v val_rational) ToString() string {
+	return strconv.FormatInt(int64(v.Value), 10)
 }
 
 func (v val_rational) Add(other number) number {

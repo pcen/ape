@@ -8,6 +8,20 @@ import (
 	"github.com/pcen/ape/ape/token"
 )
 
+/** === NATIVE FUNCTION CODE LIVES HERE FOR NOW === */
+
+var NATIVE_FUNCTIONS = []val_native_func{
+	{
+		Name:   "println",
+		Params: []string{"val"},
+		Fn: func(scope *Scope) value {
+			val := scope.Get("val")
+			println(val.ToString())
+			return val_void{}
+		},
+	},
+}
+
 type Interpreter interface {
 	Interpret(ast.Node)
 }
@@ -22,6 +36,13 @@ func NewTWI() *TWI {
 		Enclosing: nil,
 		Values:    make(map[string]value),
 	}
+
+	// Load in all native functions in global scope
+	// This means you could override them in more inner scopes..
+	for _, nf := range NATIVE_FUNCTIONS {
+		scope.Define(nf.Name, nf)
+	}
+
 	return &TWI{
 		GlobalScope:  scope,
 		CurrentScope: scope,
@@ -156,27 +177,28 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		args = append(args, twi.evaluateExpr(arg))
 	}
 
+	// Handle return values here
+	defer func() {
+		if ret_val := recover(); ret_val != nil {
+			switch ret_val.(type) {
+			case value:
+				return_val = ret_val.(value) // Use named return to update on panic
+				return
+			}
+			panic(ret_val)
+		}
+		return_val = val_void{}
+	}()
+
 	switch fn := callee.(type) {
 	case val_func:
-		fn_name := fn.Name
 		fn_scope := MakeFnScope(twi.GlobalScope, args, fn.Params)
-
-		fmt.Println("CALLING: ", fn_name)
-
-		defer func() {
-			if ret_val := recover(); ret_val != nil {
-				switch ret_val.(type) {
-				case value:
-					return_val = ret_val.(value) // Use named return to update on panic
-					return
-				}
-				panic(ret_val)
-			}
-			return_val = val_void{}
-		}()
-
 		twi.visitBlockStmt(&fn_scope, fn.Body)
 		return val_void{}
+
+	case val_native_func:
+		fn_scope := MakeFnScope(twi.GlobalScope, args, fn.Params)
+		return fn.Fn(&fn_scope)
 
 	default:
 		panic(fmt.Sprintf("Trying to call a non function: %s", fn))
