@@ -91,3 +91,18 @@ func TestInsertAfterBrace(t *testing.T) {
 		t.Fatal("tokens are not equal")
 	}
 }
+
+func TestSkipSeizeKeywords(t *testing.T) {
+	source := `
+		func bar() {
+			SKIP {
+				x := 1 * 2
+				REVERSE x
+			} SEIZE (2) {
+				println("this is two")
+			}
+		}
+	`
+	tokens := lex(source)
+	fmt.Println(tokens)
+}

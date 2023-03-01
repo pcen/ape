@@ -168,3 +168,38 @@ type FallthroughtStmt struct{}
 func (s *FallthroughtStmt) StmtStr() string {
 	return "fallthrough"
 }
+
+type SkipStmt struct {
+	Token  token.Token
+	Body   *BlockStmt
+	Seizes []*SeizeStmt
+}
+
+func (s *SkipStmt) StmtStr() string {
+	return "SKIP:\n" + s.Body.StmtStr()
+}
+
+type SeizeStmt struct {
+	Token token.Token
+	Expr  Expression
+	Body  *BlockStmt
+}
+
+func (s *SeizeStmt) StmtStr() string {
+	if s.Expr != nil {
+		return "SEIZE: " + s.Expr.ExprStr() + "\n" + s.Body.StmtStr()
+	}
+	return "SEIZE:\n" + s.Body.StmtStr()
+}
+
+type ReverseStmt struct {
+	Token token.Token
+	Expr  Expression
+}
+
+func (s *ReverseStmt) StmtStr() string {
+	if s.Expr != nil {
+		return "(REVERSE " + s.Expr.ExprStr() + ")"
+	}
+	return "(REVERSE)"
+}

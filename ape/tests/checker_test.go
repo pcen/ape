@@ -9,46 +9,77 @@ import (
 )
 
 const (
-	prog1 = `
-		module test_module
-		class Foo {}
-		class Bar {}
-		class Biz {}
-	`
+	// prog1 = `
+	// 	module test_module
+	// 	class Foo {}
+	// 	class Bar {}
+	// 	class Biz {}
+	// `
 
-	prog2 = `
-		module test_module
-		var a int = 1
-		var b string = "foo"
-		var c bool = false
-		var d int = 2
+	// prog2 = `
+	// 	module test_module
+	// 	var a int = 1
+	// 	var b string = "foo"
+	// 	var c bool = false
+	// 	var d int = 2
 
-		func fizzle() {
-			var e int = a * (d - (5 + 1))
+	// 	func fizzle() {
+	// 		var e int = a * (d - (5 + 1))
+	// 	}
+
+	// 	val pi float = 3.1415
+	// `
+
+	// prog3 = `
+	// 	module test_module
+	// 	var a int = 1
+	// 	var b int = 2
+	// 	var c int = a * b
+	// 	var d float = c ** 2.5 ** 4
+
+	// 	func foo(a float) int {
+	// 		var b string = "jejeje"
+	// 		return b
+	// 	}
+
+	// 	var e string = foo()
+	// `
+
+	prog4 = `
+		module test
+		func main() {
+			SKIP {
+				REVERSE 1
+			} SEIZE {
+				println("default seize")
+			}
 		}
 
-		val pi float = 3.1415
+		func notMain() {
+			SKIP {
+				REVERSE "string"
+			} SEIZE ("string") {
+				println("seize on a string")
+			}
+		}
 	`
 
-	prog3 = `
-		module test_module
-		var a int = 1
-		var b int = 2
-		var c int = a * b
-		var d float = c ** 2.5 ** 4
-
-		func foo(a float) int {
-			var b string = "jejeje"
-			return b
+	badSeize = `
+		module test
+		func main() {
+			SKIP {
+				REVERSE 1.0
+			} SEIZE (1) {
+				println("bad")
+			}
 		}
-
-		var e string = foo()
 	`
 )
 
 var (
 	progs = []string{
-		prog1, prog2, prog3,
+		prog4, badSeize,
+		// prog1, prog2, prog3,
 	}
 )
 

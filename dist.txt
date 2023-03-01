@@ -12,6 +12,7 @@ classBody: u[0, 5]
 parameters: u[0, 5]
 
 stmtList: u[0, 1]
+skipStmt: u[0, 2]
 
 or: b[10]
 and: b[10]

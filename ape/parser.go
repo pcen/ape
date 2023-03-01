@@ -328,7 +328,7 @@ func (p *parser) Statement() (s ast.Statement) {
 	//   literals. we could prevent literals here, which would be simple to parse but would
 	//   technically complicate the grammar
 	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, token.OpenBrack, // atom
-		token.Bang, token.Minus, token.Tilde: // unary operators
+		token.Bang, token.Minus, token.Tilde, token.Reverse: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
 
@@ -372,6 +372,14 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = &ast.ErrStmt{}
 		panic("stmt at eof")
 
+	// case token.Reverse:
+	// 	s = p.RevereStmt()
+	// 	p.separator("reverse stmt")
+
+	case token.Skip:
+		s = p.SkipStmt()
+		p.separator("skip stmt")
+
 	default:
 		ast.PrettyPrint(p.decls)
 		for _, err := range p.errors {
@@ -385,6 +393,10 @@ func (p *parser) Statement() (s ast.Statement) {
 }
 
 func (p *parser) SimpleStmt() ast.Statement {
+	if p.peekIs(token.Reverse) {
+		return p.ReverseStmt()
+	}
+
 	if p.peekIs(token.Identifier) && p.peekn(2).Kind == token.Colon {
 		return &ast.TypedDeclStmt{Decl: p.VarDecl()}
 	}
@@ -493,6 +505,38 @@ func (p *parser) ForStmt() *ast.ForStmt {
 
 	default:
 		p.err("%v cannot start a loop statement", p.prev())
+	}
+	s.Body = p.BlockStmt()
+	return s
+}
+
+func (p *parser) ReverseStmt() *ast.ReverseStmt {
+	s := &ast.ReverseStmt{}
+	p.consume(token.Reverse, "reverse stmt")
+	if p.peek().Kind != token.Sep && p.peek().Kind != token.OpenBrace {
+		s.Expr = p.Expression()
+	}
+	return s
+}
+
+func (p *parser) SkipStmt() *ast.SkipStmt {
+	s := &ast.SkipStmt{}
+	p.consume(token.Skip, "skip stmt")
+	s.Body = p.BlockStmt()
+	s.Seizes = make([]*ast.SeizeStmt, 0)
+	for p.peekIs(token.Seize) {
+		s.Seizes = append(s.Seizes, p.SeizeStmt())
+	}
+	return s
+}
+
+func (p *parser) SeizeStmt() *ast.SeizeStmt {
+	s := &ast.SeizeStmt{}
+	p.consume(token.Seize, "seize stmt")
+	if p.peek().Kind == token.OpenParen {
+		p.consume(token.OpenParen, "start of exception type (expr) for seize")
+		s.Expr = p.Expression()
+		p.consume(token.CloseParen, "end of exception type (expr) for seize")
 	}
 	s.Body = p.BlockStmt()
 	return s

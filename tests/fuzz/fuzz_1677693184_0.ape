@@ -1,0 +1,28 @@
+module foo ;
+ foo : : ~ ! - - false or "bar" >> - ~ true and - ! "bar" ;
+ func foo ( ) int { SKIP { { } } SEIZE ( true >> ~ ( ~ ~ "bar" ) ) { { } } ;
+ } ;
+ foo : int = ~ ! "bar" ;
+ class foo { func foo ( ) int { } ;
+ } ;
+ func foo ( ) int . int . int { foo : int : - ! "bar" ;
+ } ;
+ func foo ( ) int { } ;
+ func foo ( ) int { for foo : = ! ~ ~ - - foo and 123 ;
+ - "bar" and ( ! true << false or true [ ~ false ] > true and - true ) ;
+ 123 and [ [ ] , foo != ~ false , ~ ! ( ~ ~ 123 ) ( ) <= [ ] or true , - ~ 123 and ! - false ] { } ;
+ } ;
+ foo : : - ! true [ ~ ! false or ! - ! ~ "bar" ] ;
+ foo : int = - ~ [ foo << "bar" ( 123 , - - ! - ! - ! ! "bar" - ~ ! ~ ( "bar" * - ( 123 ) ) , ( - "bar" ( ) ) ) , ~ ~ ! - - ! ! ( ~ "bar" ) <= ~ true and ! - ! - "bar" - ! ~ foo ] [ ! ! 123 ] ;
+ foo : = - ! true > ~ ~ "bar" << "bar" ( ) ;
+ func foo ( ) int { } ;
+ class foo { } ;
+ func foo ( foo int , foo int , foo int . int . int , foo int , foo int . int , foo int ) int . int { REVERSE ;
+ } ;
+ func foo ( ) int . int . int { } ;
+ class foo { func foo ( ) int . int . int { foo : = 123 or false ;
+ } ;
+ } ;
+ foo : : ( [ ( [ false >> foo , [ ! ~ [ ] , true | ! true , false or false != "bar" and ~ ! false >> true , - "bar" ( - foo , false . foo or foo . foo and true . foo , ! false , ~ ( - ( foo ) ) or ~ - ~ 123 and ! foo % 123 , ! ~ "bar" ) , ! ! "bar" ] or 123 ] or - ! - ~ true ) ( "bar" , "bar" or ( false ( "bar" , "bar" , 123 . foo , ! - ! ! [ ] ) ) , false or ! [ ] - ~ "bar" , 123 ) and ~ ! false , ! false , true , - false , false or ! ! [ ] ] ) ;
+ foo : int = false / ~ false + - ! foo ;
+ 

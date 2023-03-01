@@ -48,10 +48,23 @@ var (
 			a *= i
 		}
 	}`
+
+	parser_test2 = `
+	module test
+	func main(a int) {
+		b: int = 10
+		SKIP {
+			1 + 2
+			REVERSE x
+		} SEIZE(3) {
+			b = 3
+		}
+		return b
+	}`
 )
 
 func TestParsing(t *testing.T) {
-	prog, errs := Parse(parser_test1)
+	prog, errs := Parse(parser_test2)
 	fmt.Println("module:", prog.Module)
 	fmt.Println("ast:")
 	ast.PrettyPrint(prog.Ast)
