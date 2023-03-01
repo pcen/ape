@@ -96,6 +96,8 @@ func (c *Checker) CheckStatement(stmt ast.Statement) Type {
 				nextReverseType := c.CheckExpr(reverseStmt.Expr)
 				if reverseType != nil && !nextReverseType.Is(Void) && !nextReverseType.Is(reverseType) {
 					c.err(reverseStmt.Token.Position, "inconsistent reverse types in skip block")
+				} else {
+					reverseType = nextReverseType
 				}
 			default:
 				c.CheckStatement(bodyStmt)
@@ -106,7 +108,7 @@ func (c *Checker) CheckStatement(stmt ast.Statement) Type {
 			// in the preceding skip statement block
 			accepts := c.CheckStatement(seize)
 			if reverseType != nil && !accepts.Is(Void) && !accepts.Is(reverseType) {
-				c.err(seize.Token.Position, "seize expr type does not match reverse expr type in skip block")
+				c.err(seize.Token.Position, "seize expr type does not match reverse expr type in skip block: %v is not %v", accepts, reverseType)
 			}
 		}
 
