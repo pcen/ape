@@ -95,6 +95,11 @@ const (
 	Rational
 	Identifier
 	Eof
+
+	// reverse execution keywords
+	Skip
+	Seize
+	Reverse
 )
 
 var (
@@ -183,6 +188,10 @@ var (
 		Identifier: "<IDENTIFIER>",
 
 		Eof: "<EOF>",
+
+		Skip:    "SKIP",
+		Seize:   "SEIZE",
+		Reverse: "REVERSE",
 	}
 
 	keywords = map[string]Kind{
@@ -208,6 +217,10 @@ var (
 		"false":       False,
 		"module":      Module,
 		"import":      Import,
+
+		"SKIP":    Skip,
+		"SEIZE":   Seize,
+		"REVERSE": Reverse,
 	}
 )
 
