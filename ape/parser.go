@@ -328,7 +328,7 @@ func (p *parser) Statement() (s ast.Statement) {
 	//   literals. we could prevent literals here, which would be simple to parse but would
 	//   technically complicate the grammar
 	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, token.OpenBrack, // atom
-		token.Bang, token.Minus, token.Tilde: // unary operators
+		token.Bang, token.Minus, token.Tilde, token.Reverse: // unary operators
 		s = p.SimpleStmt()
 		p.separator("simple stmt")
 
@@ -372,9 +372,9 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = &ast.ErrStmt{}
 		panic("stmt at eof")
 
-	case token.Reverse:
-		s = p.RevereStmt()
-		p.separator("reverse stmt")
+	// case token.Reverse:
+	// 	s = p.RevereStmt()
+	// 	p.separator("reverse stmt")
 
 	case token.Skip:
 		s = p.SkipStmt()
@@ -393,6 +393,10 @@ func (p *parser) Statement() (s ast.Statement) {
 }
 
 func (p *parser) SimpleStmt() ast.Statement {
+	if p.peekIs(token.Reverse) {
+		return p.ReverseStmt()
+	}
+
 	if p.peekIs(token.Identifier) && p.peekn(2).Kind == token.Colon {
 		return &ast.TypedDeclStmt{Decl: p.VarDecl()}
 	}
@@ -506,10 +510,10 @@ func (p *parser) ForStmt() *ast.ForStmt {
 	return s
 }
 
-func (p *parser) RevereStmt() *ast.ReverseStmt {
+func (p *parser) ReverseStmt() *ast.ReverseStmt {
 	s := &ast.ReverseStmt{}
 	p.consume(token.Reverse, "reverse stmt")
-	if p.peek().Kind != token.Sep {
+	if p.peek().Kind != token.Sep && p.peek().Kind != token.OpenBrace {
 		s.Expr = p.Expression()
 	}
 	return s
