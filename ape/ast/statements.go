@@ -168,3 +168,29 @@ type FallthroughtStmt struct{}
 func (s *FallthroughtStmt) StmtStr() string {
 	return "fallthrough"
 }
+
+type SkipStmt struct {
+	Body   *BlockStmt
+	Seizes []*SeizeStmt
+}
+
+func (s *SkipStmt) StmtStr() string {
+	return "SKIP:\n" + s.Body.StmtStr()
+}
+
+type SeizeStmt struct {
+	Expr Expression
+	Body *BlockStmt
+}
+
+func (s *SeizeStmt) StmtStr() string {
+	return "SEIZE:\n" + s.Body.StmtStr()
+}
+
+type ReverseStmt struct {
+	Expr Expression
+}
+
+func (s *ReverseStmt) StmtStr() string {
+	return "(REVERSE " + s.Expr.ExprStr() + ")"
+}
