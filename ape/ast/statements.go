@@ -170,6 +170,7 @@ func (s *FallthroughtStmt) StmtStr() string {
 }
 
 type SkipStmt struct {
+	Token  token.Token
 	Body   *BlockStmt
 	Seizes []*SeizeStmt
 }
@@ -179,8 +180,9 @@ func (s *SkipStmt) StmtStr() string {
 }
 
 type SeizeStmt struct {
-	Expr Expression
-	Body *BlockStmt
+	Token token.Token
+	Expr  Expression
+	Body  *BlockStmt
 }
 
 func (s *SeizeStmt) StmtStr() string {
@@ -188,7 +190,8 @@ func (s *SeizeStmt) StmtStr() string {
 }
 
 type ReverseStmt struct {
-	Expr Expression
+	Token token.Token
+	Expr  Expression
 }
 
 func (s *ReverseStmt) StmtStr() string {
