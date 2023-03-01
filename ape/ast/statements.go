@@ -198,5 +198,8 @@ type ReverseStmt struct {
 }
 
 func (s *ReverseStmt) StmtStr() string {
-	return "(REVERSE " + s.Expr.ExprStr() + ")"
+	if s.Expr != nil {
+		return "(REVERSE " + s.Expr.ExprStr() + ")"
+	}
+	return "(REVERSE)"
 }

@@ -507,8 +507,12 @@ func (p *parser) ForStmt() *ast.ForStmt {
 }
 
 func (p *parser) RevereStmt() *ast.ReverseStmt {
+	s := &ast.ReverseStmt{}
 	p.consume(token.Reverse, "reverse stmt")
-	return &ast.ReverseStmt{Expr: p.Expression()}
+	if p.peek().Kind != token.Sep {
+		s.Expr = p.Expression()
+	}
+	return s
 }
 
 func (p *parser) SkipStmt() *ast.SkipStmt {
