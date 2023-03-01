@@ -46,6 +46,7 @@ func (p *printer) printStmtList(stmts []Statement) {
 
 func (p *printer) prettyPrint(node Node) {
 	p.level++
+	p.printf("type: %T\n", node)
 	switch n := node.(type) {
 	case Declaration:
 		switch decl := n.(type) {

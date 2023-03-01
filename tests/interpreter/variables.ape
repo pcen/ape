@@ -1,0 +1,14 @@
+func helper_func(i int) int {
+	sum := 100
+
+	{
+		sum = 200
+        i := 4000
+	}
+	return 1 + 10 + sum + i
+}
+
+func main() int {
+	sum := 2
+	return helper_func(1000) + sum
+}
