@@ -25,7 +25,7 @@ stmt           -> simpleStmt | compoundStmt | varDeclStmt
 simpleStmt     -> incStmt | reverseStmt | assignment | expr
 
 incStmt        -> expr ("++" | "--")
-reverseStmt    -> ( "REVERSE" expr ";" ) | ( "REVERSE" ";" )
+reverseStmt    -> ( "REVERSE" expr ) | ( "REVERSE" )
 assignment     -> expr assignOp expr
 assignOp       -> "=" | "+=" | "*=" | "-=" | "/=" | "**=" | "%="
 
