@@ -91,6 +91,12 @@ func (p *printer) prettyPrint(node Node) {
 			p.prettyPrint(stmt.Body)
 			p.printf("}\n")
 
+		case *SkipStmt:
+			p.printf("%v\n", stmt.StmtStr())
+			for _, seize := range stmt.Seizes {
+				p.printf("%v\n", seize.StmtStr())
+			}
+
 		default:
 			p.printf("%v\n", stmt.StmtStr())
 		}

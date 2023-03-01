@@ -34,6 +34,7 @@ var (
 		token.CloseParen:  true,
 		token.CloseBrace:  true,
 		token.CloseBrack:  true,
+		token.Reverse:     true,
 	}
 )
 

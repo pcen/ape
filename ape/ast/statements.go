@@ -186,6 +186,9 @@ type SeizeStmt struct {
 }
 
 func (s *SeizeStmt) StmtStr() string {
+	if s.Expr != nil {
+		return "SEIZE: " + s.Expr.ExprStr() + "\n" + s.Body.StmtStr()
+	}
 	return "SEIZE:\n" + s.Body.StmtStr()
 }
 

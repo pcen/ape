@@ -372,6 +372,14 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = &ast.ErrStmt{}
 		panic("stmt at eof")
 
+	case token.Reverse:
+		s = p.RevereStmt()
+		p.separator("reverse stmt")
+
+	case token.Skip:
+		s = p.SkipStmt()
+		p.separator("skip stmt")
+
 	default:
 		ast.PrettyPrint(p.decls)
 		for _, err := range p.errors {
@@ -493,6 +501,34 @@ func (p *parser) ForStmt() *ast.ForStmt {
 
 	default:
 		p.err("%v cannot start a loop statement", p.prev())
+	}
+	s.Body = p.BlockStmt()
+	return s
+}
+
+func (p *parser) RevereStmt() *ast.ReverseStmt {
+	p.consume(token.Reverse, "reverse stmt")
+	return &ast.ReverseStmt{Expr: p.Expression()}
+}
+
+func (p *parser) SkipStmt() *ast.SkipStmt {
+	s := &ast.SkipStmt{}
+	p.consume(token.Skip, "skip stmt")
+	s.Body = p.BlockStmt()
+	s.Seizes = make([]*ast.SeizeStmt, 0)
+	for p.peekIs(token.Seize) {
+		s.Seizes = append(s.Seizes, p.SeizeStmt())
+	}
+	return s
+}
+
+func (p *parser) SeizeStmt() *ast.SeizeStmt {
+	s := &ast.SeizeStmt{}
+	p.consume(token.Seize, "seize stmt")
+	if p.peek().Kind == token.OpenParen {
+		p.consume(token.OpenParen, "start of exception type (expr) for seize")
+		s.Expr = p.Expression()
+		p.consume(token.CloseParen, "end of exception type (expr) for seize")
 	}
 	s.Body = p.BlockStmt()
 	return s
