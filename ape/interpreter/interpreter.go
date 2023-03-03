@@ -329,6 +329,15 @@ func (twi *TWI) visitSkipStmt(stmt *ast.SkipStmt) {
 	defer func() {
 		if panic_val := recover(); panic_val != nil {
 			switch holder := panic_val.(type) {
+			case ReturnHolder:
+				// Reset the last LastBreadCrumb to point to the bread crumb before this skip, without reverse executing
+				// This is necessary to support a return within a skip statement
+				for twi.LastBreadCrumb.SkipMarker != stmt {
+					twi.LastBreadCrumb = twi.LastBreadCrumb.Prev
+				}
+
+				twi.LastBreadCrumb = twi.LastBreadCrumb.Prev // Remove the SkipMarker
+
 			case ReverseHolder:
 				// Reverse any assignment statements Before the current SkipMarker
 				for twi.LastBreadCrumb.SkipMarker != stmt {

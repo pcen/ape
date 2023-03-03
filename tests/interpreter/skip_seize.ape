@@ -1,3 +1,7 @@
+func nestedFoo(rev_type Sting){
+   return rev_type
+}
+
 func foo(rev_type String) int {
     println("--------------------------------------------")
     println("Enter FOO with rev_type " + rev_type)
@@ -12,13 +16,13 @@ func foo(rev_type String) int {
             x++
             x =  x + 3
             
-            REVERSE rev_type
+            REVERSE nestedFoo(rev_type)
         } SEIZE ("a") {
             println("In Inner Seize a")
         } SEIZE ("b") {
             println("In Inner Seize b")
             x = 4
-            REVERSE "b"
+            REVERSE nestedFoo("b")
         }
 
         println("Continuing in skip")
@@ -42,6 +46,7 @@ func foo(rev_type String) int {
 
 func main() int {
     sum :=  foo("a")*100 +  foo("b")*10 +  foo("c")
+
     println("The sum is: ")
 
 	return sum
