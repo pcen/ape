@@ -1,0 +1,48 @@
+func foo(rev_type String) int {
+    println("--------------------------------------------")
+    println("Enter FOO with rev_type " + rev_type)
+    println("Set X to 1")
+    x := 1
+    
+    SKIP {
+        println("In Skip: Set X to 9")
+        x = 3
+        SKIP{
+            println("In Inner Skip:")
+            x++
+            x =  x + 3
+            
+            REVERSE rev_type
+        } SEIZE ("a") {
+            println("In Inner Seize a")
+        } SEIZE ("b") {
+            println("In Inner Seize b")
+            x = 4
+            REVERSE "b"
+        }
+
+        println("Continuing in skip")
+        x++
+
+    } SEIZE ("a") {
+        println("IN SEIZE A")
+    } SEIZE ("b") {
+        println("IN SEIZE B")
+        x ++
+    } SEIZE ("c") {
+        x = 0
+        println("IN SEIZE C")
+    }
+
+    println("Exiting Foo with Value: ")
+    println(x)
+
+    return x
+}
+
+func main() int {
+    sum :=  foo("a")*100 +  foo("b")*10 +  foo("c")
+    println("The sum is: ")
+
+	return sum
+}

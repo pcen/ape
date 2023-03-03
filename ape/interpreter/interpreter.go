@@ -27,8 +27,9 @@ type Interpreter interface {
 }
 
 type TWI struct {
-	GlobalScope  *Scope
-	CurrentScope *Scope
+	GlobalScope    *Scope
+	CurrentScope   *Scope
+	LastBreadCrumb *BreadCrumb
 }
 
 func NewTWI() *TWI {
@@ -44,8 +45,9 @@ func NewTWI() *TWI {
 	}
 
 	return &TWI{
-		GlobalScope:  scope,
-		CurrentScope: scope,
+		GlobalScope:    scope,
+		CurrentScope:   scope,
+		LastBreadCrumb: nil,
 	}
 }
 
@@ -179,13 +181,13 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 
 	// Handle return values here
 	defer func() {
-		if ret_val := recover(); ret_val != nil {
-			switch ret_val.(type) {
-			case value:
-				return_val = ret_val.(value) // Use named return to update on panic
+		if panic_val := recover(); panic_val != nil {
+			switch holder := panic_val.(type) {
+			case ReturnHolder:
+				return_val = holder.Value // Use named return to update on panic
 				return
 			}
-			panic(ret_val)
+			panic(panic_val)
 		}
 		return_val = val_void{}
 	}()
@@ -226,6 +228,10 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 		twi.visitAssignmentStmt(t)
 	case *ast.IncStmt:
 		twi.visitIncStmt(t)
+	case *ast.SkipStmt:
+		twi.visitSkipStmt(t)
+	case *ast.ReverseStmt:
+		twi.visitReverseStmt(t)
 	}
 }
 
@@ -283,13 +289,18 @@ see how this value is used.
 */
 func (twi *TWI) visitReturnStmt(ret *ast.ReturnStmt) {
 	val := twi.evaluateExpr(ret.Expr)
-	panic(val)
+	panic(ReturnHolder{val})
 }
 
 func (twi *TWI) visitAssignmentStmt(stmt *ast.AssignmentStmt) {
 	// TODO: This only works for simple name assignments
-
-	twi.CurrentScope.Set(stmt.Lhs.ExprStr(), twi.evaluateExpr(stmt.Rhs))
+	name := stmt.Lhs.ExprStr()
+	twi.LastBreadCrumb = &BreadCrumb{
+		Prev:    twi.LastBreadCrumb,
+		Scope:   twi.CurrentScope.GetScope(name),
+		Name:    name,
+		PrevVal: twi.CurrentScope.Get(name)}
+	twi.CurrentScope.Set(name, twi.evaluateExpr(stmt.Rhs))
 }
 
 func (twi *TWI) visitIncStmt(inc *ast.IncStmt) {
@@ -303,8 +314,57 @@ func (twi *TWI) visitIncStmt(inc *ast.IncStmt) {
 
 	switch t := inc.Expr.(type) {
 	case *ast.IdentExpr:
-		twi.CurrentScope.Set(t.Ident.Lexeme, val.(value))
+		name := t.Ident.Lexeme
+		twi.LastBreadCrumb = &BreadCrumb{
+			Prev:    twi.LastBreadCrumb,
+			Scope:   twi.CurrentScope.GetScope(name),
+			Name:    name,
+			PrevVal: twi.CurrentScope.Get(name)}
+		twi.CurrentScope.Set(name, val.(value))
 	}
+}
+
+func (twi *TWI) visitSkipStmt(stmt *ast.SkipStmt) {
+	// Handle return values here
+	defer func() {
+		if panic_val := recover(); panic_val != nil {
+			switch holder := panic_val.(type) {
+			case ReverseHolder:
+				// Reverse any assignment statements Before the current SkipMarker
+				for twi.LastBreadCrumb.SkipMarker != stmt {
+					twi.LastBreadCrumb.Reverse()
+					twi.LastBreadCrumb = twi.LastBreadCrumb.Prev
+				}
+
+				twi.LastBreadCrumb = twi.LastBreadCrumb.Prev // Remove the SkipMarker
+
+				for _, seize := range stmt.Seizes {
+					seize_val := twi.evaluateExpr(seize.Expr)
+
+					if seize_val.Equals(holder.Value) {
+						twi.executeStmt(seize.Body)
+						return // Exit the Panic Loop
+					}
+
+				}
+			}
+			panic(panic_val) // Propagate panic
+		}
+	}()
+
+	// Mark the start of the current skip
+	twi.LastBreadCrumb = &BreadCrumb{
+		Prev:       twi.LastBreadCrumb,
+		SkipMarker: stmt,
+	}
+
+	twi.executeStmt(stmt.Body)
+}
+
+func (twi *TWI) visitReverseStmt(rev *ast.ReverseStmt) {
+	// Handle reverse values here
+	val := twi.evaluateExpr(rev.Expr)
+	panic(ReverseHolder{val})
 }
 
 /** === Statement Code Ends === */

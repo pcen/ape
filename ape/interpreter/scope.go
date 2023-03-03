@@ -31,6 +31,20 @@ func MakeFnScope(enclosing *Scope, vals []value, param_names []string) Scope {
 	}
 }
 
+/** Travel up scopes looking for the enclosing scope for the given identifier */
+func (s *Scope) GetScope(name string) *Scope {
+	_, exists := s.Values[name]
+	if exists {
+		return s
+	}
+
+	if s.Enclosing != nil {
+		return s.Enclosing.GetScope(name)
+	}
+
+	panic(fmt.Sprintf("Failed to find variable with name: %s", name))
+}
+
 /** Travel up scopes looking for given identifier. */
 func (s *Scope) Get(name string) value {
 	val, exists := s.Values[name]
