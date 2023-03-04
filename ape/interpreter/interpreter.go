@@ -30,6 +30,7 @@ type TWI struct {
 	GlobalScope    *Scope
 	CurrentScope   *Scope
 	LastBreadCrumb *BreadCrumb
+	reversing      bool
 }
 
 func NewTWI() *TWI {
@@ -48,6 +49,43 @@ func NewTWI() *TWI {
 		GlobalScope:    scope,
 		CurrentScope:   scope,
 		LastBreadCrumb: nil,
+	}
+}
+
+func (twi *TWI) AddBreadCrumb(node ast.Node) {
+	if twi.reversing {
+		// only add bread crumbs when executing forwards
+		return
+	}
+
+	switch n := node.(type) {
+	case *ast.AssignmentStmt:
+		name := n.Lhs.ExprStr()
+		twi.LastBreadCrumb = &BreadCrumb{
+			Prev:    twi.LastBreadCrumb,
+			Scope:   twi.CurrentScope.GetScope(name),
+			Name:    name,
+			PrevVal: twi.CurrentScope.Get(name),
+		}
+
+	case *ast.ExprStmt:
+		// only add bread crumb when the expression is annotated
+		if prevVal, ok := n.Annotations["reverse"]; ok {
+			twi.LastBreadCrumb = &BreadCrumb{
+				Prev:    twi.LastBreadCrumb,
+				Scope:   twi.CurrentScope,
+				PrevVal: prevVal,
+			}
+		}
+
+	case *ast.IdentExpr:
+		name := n.Ident.Lexeme
+		twi.LastBreadCrumb = &BreadCrumb{
+			Prev:    twi.LastBreadCrumb,
+			Scope:   twi.CurrentScope.GetScope(name),
+			Name:    name,
+			PrevVal: twi.CurrentScope.Get(name),
+		}
 	}
 }
 
@@ -236,10 +274,7 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 }
 
 func (twi *TWI) visitExprStmt(stmt *ast.ExprStmt) {
-	twi.LastBreadCrumb = &BreadCrumb{
-		Prev:    twi.LastBreadCrumb,
-		Scope:   twi.CurrentScope,
-		PrevVal: stmt.Annotations["reverse"]}
+	twi.AddBreadCrumb(stmt)
 	twi.evaluateExpr(stmt.Expr)
 }
 
@@ -302,12 +337,8 @@ func (twi *TWI) visitReturnStmt(ret *ast.ReturnStmt) {
 
 func (twi *TWI) visitAssignmentStmt(stmt *ast.AssignmentStmt) {
 	// TODO: This only works for simple name assignments
+	twi.AddBreadCrumb(stmt)
 	name := stmt.Lhs.ExprStr()
-	twi.LastBreadCrumb = &BreadCrumb{
-		Prev:    twi.LastBreadCrumb,
-		Scope:   twi.CurrentScope.GetScope(name),
-		Name:    name,
-		PrevVal: twi.CurrentScope.Get(name)}
 	twi.CurrentScope.Set(name, twi.evaluateExpr(stmt.Rhs))
 }
 
@@ -322,12 +353,8 @@ func (twi *TWI) visitIncStmt(inc *ast.IncStmt) {
 
 	switch t := inc.Expr.(type) {
 	case *ast.IdentExpr:
+		twi.AddBreadCrumb(t)
 		name := t.Ident.Lexeme
-		twi.LastBreadCrumb = &BreadCrumb{
-			Prev:    twi.LastBreadCrumb,
-			Scope:   twi.CurrentScope.GetScope(name),
-			Name:    name,
-			PrevVal: twi.CurrentScope.Get(name)}
 		twi.CurrentScope.Set(name, val.(value))
 	}
 }
@@ -364,6 +391,7 @@ func (twi *TWI) visitSkipStmt(stmt *ast.SkipStmt) {
 					}
 
 				}
+				twi.reversing = false
 			}
 			panic(panic_val) // Propagate panic
 		}
@@ -381,6 +409,7 @@ func (twi *TWI) visitSkipStmt(stmt *ast.SkipStmt) {
 func (twi *TWI) visitReverseStmt(rev *ast.ReverseStmt) {
 	// Handle reverse values here
 	val := twi.evaluateExpr(rev.Expr)
+	twi.reversing = true
 	panic(ReverseHolder{val})
 }
 

@@ -12,7 +12,8 @@ func undo() {
 func main() int {
 	SKIP {
 		a += 99
-		set()	@reverse undo()
+		b += 10
+		set() @reverse undo()
 		REVERSE "DEFAULT"
 	} SEIZE ("DEFAULT") {
 		println(b)
