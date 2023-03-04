@@ -1,0 +1,30 @@
+func nestedFoo(rev_type Sting) int {
+    x := 1
+    SKIP {
+        return x
+    } SEIZE ("a") {
+        println("In NestedFoo Seize")
+    }
+
+    return x
+}
+
+func foo(rev_type String) int {
+    x := 2
+    
+    SKIP {
+        x = x + nestedFoo(rev_type)
+        REVERSE rev_type
+    } SEIZE ("a") {
+        println("In FOO Seize")
+    }
+    return x
+}
+
+func main() int {
+    sum :=  foo("a")
+
+    println("The sum is: ")
+
+	return sum
+}
