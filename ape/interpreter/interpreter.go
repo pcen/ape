@@ -221,7 +221,7 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 	case *ast.ReturnStmt:
 		twi.visitReturnStmt(t)
 	case *ast.ExprStmt:
-		twi.evaluateExpr(t.Expr)
+		twi.visitExprStmt(t)
 	case *ast.TypedDeclStmt:
 		twi.executeDecl(t.Decl)
 	case *ast.AssignmentStmt:
@@ -233,6 +233,14 @@ func (twi *TWI) executeStmt(stmt ast.Statement) {
 	case *ast.ReverseStmt:
 		twi.visitReverseStmt(t)
 	}
+}
+
+func (twi *TWI) visitExprStmt(stmt *ast.ExprStmt) {
+	twi.LastBreadCrumb = &BreadCrumb{
+		Prev:    twi.LastBreadCrumb,
+		Scope:   twi.CurrentScope,
+		PrevVal: stmt.Annotations["reverse"]}
+	twi.evaluateExpr(stmt.Expr)
 }
 
 func (twi *TWI) visitForStmt(stmt *ast.ForStmt) {

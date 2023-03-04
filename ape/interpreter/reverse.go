@@ -14,11 +14,6 @@ type ReverseHolder struct {
 	Value value
 }
 
-/** A reverse annotation holds a statement that is hopefully the inverse of some other statement */
-type ReverseAnnotation struct {
-	stmt *ast.Statement
-}
-
 /** Empty interface but in reality, only Value and ReverseAnnotation should be used for this */
 type Reversible interface{}
 
@@ -34,7 +29,8 @@ func (bc BreadCrumb) Reverse(twi *TWI) {
 	switch t := bc.PrevVal.(type) {
 	case value:
 		bc.Scope.Set(bc.Name, t)
-	case ReverseAnnotation:
-		twi.executeStmt(*t.stmt)
+	case ast.Statement:
+		println("HERE")
+		twi.executeStmt(t)
 	}
 }
