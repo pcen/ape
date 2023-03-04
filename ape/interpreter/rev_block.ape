@@ -1,0 +1,20 @@
+{
+	x := 1
+	SKIP {
+		y := foo(x)
+		println(y)
+		REVERSE
+	} SEIZE {
+		println(x)	// X
+	}
+}
+
+func(x int) int {
+	if (x == 1) {
+		println("YEAH")
+		return x + 10
+	} else {
+		println("NO")
+		return x - 1
+	}
+}

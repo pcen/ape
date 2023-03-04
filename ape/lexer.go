@@ -369,6 +369,8 @@ func (l *lexer) step() token.Token {
 	case ';':
 		return l.NewToken(token.Sep)
 
+	case '@':
+		return l.NewToken(token.At)
 	}
 	panic("invalid byte: " + string(b))
 }

@@ -1,0 +1,13 @@
+a := 5
+
+func foo() {
+	pure {
+		a -= 5
+		b := 20 / a
+	}
+	println(a)
+}
+
+func bar() {
+
+}

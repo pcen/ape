@@ -32,7 +32,10 @@ func (s *BlockStmt) StmtStr() string {
 }
 
 type ExprStmt struct {
-	Expr Expression
+	// Currently, only expression statements (more specifically, function calls)
+	// can have annotations, and only the "reverse" annotation is implemented
+	Annotations map[string]Statement
+	Expr        Expression
 }
 
 func (s *ExprStmt) StmtStr() string {
