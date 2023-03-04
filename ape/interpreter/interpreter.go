@@ -341,7 +341,7 @@ func (twi *TWI) visitSkipStmt(stmt *ast.SkipStmt) {
 			case ReverseHolder:
 				// Reverse any assignment statements Before the current SkipMarker
 				for twi.LastBreadCrumb.SkipMarker != stmt {
-					twi.LastBreadCrumb.Reverse()
+					twi.LastBreadCrumb.Reverse(twi)
 					twi.LastBreadCrumb = twi.LastBreadCrumb.Prev
 				}
 
