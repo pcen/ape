@@ -52,6 +52,7 @@ type Parser interface {
 	Demo() []ast.Statement
 	File() *ast.File
 	Program() []ast.Declaration
+	BlockStmt() *ast.BlockStmt
 	Errors() ([]ParseError, bool)
 }
 
@@ -329,7 +330,7 @@ func (p *parser) Statement() (s ast.Statement) {
 	//   technically complicate the grammar
 	case token.Identifier, token.True, token.False, token.Integer, token.Rational, token.String, token.OpenParen, token.OpenBrack, // atom
 		token.Bang, token.Minus, token.Tilde, token.Reverse: // unary operators
-		s = p.SimpleStmt()
+		s = p.SimpleStmt(true)
 		p.separator("simple stmt")
 
 	case token.Return:
@@ -372,10 +373,6 @@ func (p *parser) Statement() (s ast.Statement) {
 		s = &ast.ErrStmt{}
 		panic("stmt at eof")
 
-	// case token.Reverse:
-	// 	s = p.RevereStmt()
-	// 	p.separator("reverse stmt")
-
 	case token.Skip:
 		s = p.SkipStmt()
 		p.separator("skip stmt")
@@ -392,15 +389,18 @@ func (p *parser) Statement() (s ast.Statement) {
 	return s
 }
 
-func (p *parser) SimpleStmt() ast.Statement {
+func (p *parser) SimpleStmt(annotateable bool) ast.Statement {
+	// reverse
 	if p.peekIs(token.Reverse) {
 		return p.ReverseStmt()
 	}
 
+	// declaration
 	if p.peekIs(token.Identifier) && p.peekn(2).Kind == token.Colon {
 		return &ast.TypedDeclStmt{Decl: p.VarDecl()}
 	}
 
+	// increment / decrement
 	lhs := p.Expression()
 	if p.match(token.Increment, token.Decrement) {
 		return &ast.IncStmt{
@@ -408,11 +408,24 @@ func (p *parser) SimpleStmt() ast.Statement {
 			Op:   p.prev(),
 		}
 	}
+
+	// assignment
 	if p.match(token.Assign, token.PlusEq, token.MinusEq, token.StarEq, token.DivideEq, token.PowerEq, token.ModEq) {
 		return ast.NewAssignmentStmt(lhs, p.prev(), p.Expression())
 	}
 
-	return &ast.ExprStmt{Expr: lhs}
+	// expression
+	annotations := make(map[string]ast.Statement)
+	for p.match(token.At) {
+		if !annotateable {
+			p.err("@ at end of non-annotatable statement")
+		}
+		if !p.match(token.Identifier) {
+			p.err("@ must be followed by annotation name")
+		}
+		annotations[p.prev().Lexeme] = p.SimpleStmt(false)
+	}
+	return &ast.ExprStmt{Expr: lhs, Annotations: annotations}
 }
 
 func (p *parser) ReturnStmt() *ast.ReturnStmt {
@@ -498,7 +511,7 @@ func (p *parser) ForStmt() *ast.ForStmt {
 		p.separator("after for loop init")
 		s.Cond = p.Expression()
 		p.separator("after for loop condition")
-		s.Incr = p.SimpleStmt()
+		s.Incr = p.SimpleStmt(false)
 
 	case token.While:
 		s.Cond = p.Expression()

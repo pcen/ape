@@ -96,6 +96,8 @@ const (
 	Identifier
 	Eof
 
+	At // @
+
 	// reverse execution keywords
 	Skip
 	Seize
@@ -188,6 +190,8 @@ var (
 		Identifier: "<IDENTIFIER>",
 
 		Eof: "<EOF>",
+
+		At: "@",
 
 		Skip:    "SKIP",
 		Seize:   "SEIZE",
