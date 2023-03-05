@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strconv"
 
 	"github.com/pcen/ape/ape/ast"
@@ -18,6 +19,18 @@ var NATIVE_FUNCTIONS = []val_native_func{
 			val := scope.Get("val")
 			println(val.ToString())
 			return val_void{}
+		},
+	},
+	{
+		Name:   "read",
+		Params: []string{"filename"},
+		Fn: func(scope *Scope) value {
+			filename := scope.Get("filename").(val_str)
+			bytes, err := ioutil.ReadFile(filename.Value)
+			if err != nil {
+				panic(err)
+			}
+			panic(ReturnHolder{Value: val_str{Value: string(bytes)}})
 		},
 	},
 }
