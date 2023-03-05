@@ -15,7 +15,7 @@ import (
 var NATIVE_FUNCTIONS = []val_native_func{
 	{
 		Name: "println",
-		Fn: func(scope *Scope) value {
+		Fn: func(scope *Scope) {
 			var sb strings.Builder
 			for i := 0; i < len(scope.Values); i++ {
 				index := strconv.FormatInt(int64(i), 10)
@@ -23,20 +23,35 @@ var NATIVE_FUNCTIONS = []val_native_func{
 				sb.WriteString(val.ToString())
 			}
 			fmt.Println(sb.String())
-			return val_void{}
 		},
 		Variadic: true,
 	},
 	{
 		Name:   "read",
 		Params: []string{"filename"},
-		Fn: func(scope *Scope) value {
+		Fn: func(scope *Scope) {
 			filename := scope.Get("filename").(val_str)
 			bytes, err := os.ReadFile(filename.Value)
 			if err != nil {
 				panic(err)
 			}
 			panic(ReturnHolder{Value: val_str{Value: string(bytes)}})
+		},
+	},
+	{
+		Name:   "touch",
+		Params: []string{"filename"},
+		Fn: func(scope *Scope) {
+			filename := scope.Get("filename").(val_str)
+			os.Create(filename.Value)
+		},
+	},
+	{
+		Name:   "delete",
+		Params: []string{"filename"},
+		Fn: func(scope *Scope) {
+			filename := scope.Get("filename").(val_str)
+			os.Remove(filename.Value)
 		},
 	},
 }
@@ -262,11 +277,13 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		} else {
 			fn_scope = MakeFnScope(twi.GlobalScope, args, fn.Params)
 		}
-		return fn.Fn(&fn_scope)
+		fn.Fn(&fn_scope)
 
 	default:
 		panic(fmt.Sprintf("Trying to call a non function: %s", fn))
 	}
+
+	return val_void{}
 }
 
 /** === Expression Code Ends === */

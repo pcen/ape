@@ -33,7 +33,7 @@ func (v val_void) ToString() string {
 type val_native_func struct {
 	Name     string
 	Params   []string
-	Fn       func(*Scope) value
+	Fn       func(*Scope)
 	Variadic bool
 }
 
