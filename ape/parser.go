@@ -317,7 +317,7 @@ func (p *parser) separator(context string) {
 func (p *parser) Statement() (s ast.Statement) {
 	defer sync(func() {
 		s = &ast.ErrStmt{}
-		ast.PrettyPrint(p.decls)
+		// ast.PrettyPrint(p.decls)
 		p.skipTo(stmtStart)
 	})
 
@@ -378,7 +378,7 @@ func (p *parser) Statement() (s ast.Statement) {
 		p.separator("skip stmt")
 
 	default:
-		ast.PrettyPrint(p.decls)
+		// ast.PrettyPrint(p.decls)
 		for _, err := range p.errors {
 			fmt.Println(err)
 		}
@@ -571,7 +571,7 @@ func (p *parser) StmtList() (stmts []ast.Statement) {
 func (p *parser) Declaration() (d ast.Declaration) {
 	defer sync(func() {
 		d = &ast.ErrDecl{}
-		ast.PrettyPrint(p.decls)
+		// ast.PrettyPrint(p.decls)
 		p.skipTo(declStart)
 	})
 
