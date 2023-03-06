@@ -3,6 +3,9 @@
 *.txt
 *.i
 
+# input files
+!tests/resources/*
+
 # grammar
 !grammar.txt
 !dist.txt
