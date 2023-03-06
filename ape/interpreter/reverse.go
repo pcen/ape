@@ -30,7 +30,6 @@ func (bc BreadCrumb) Reverse(twi *TWI) {
 	case value:
 		bc.Scope.Set(bc.Name, t)
 	case ast.Statement:
-		println("HERE")
 		twi.executeStmt(t)
 	}
 }

@@ -1,0 +1,34 @@
+
+func charge(name string) {
+	println("CHARGE:")
+	println(name)
+}
+
+func refund(name string) {
+	println("REFUND:")
+	println(name)
+}
+
+func reserveSeat(name string) {
+	println("RESERVE SEAT:")
+	println(name)
+}
+
+func freeSeat(name string) {
+	println("FREE SEAT:")
+	println(name)
+}
+
+func main() {
+	name := "reenus"
+	SKIP {
+		charge(name) @reverse refund(name)
+		reserveSeat(name) @reverse freeSeat(name)
+		# something went wrong...
+		REVERSE "error"
+	} SEIZE ("error") {
+		println("side effects were undone")
+	}
+
+	return 0
+}

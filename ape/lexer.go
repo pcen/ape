@@ -276,7 +276,8 @@ func (l *lexer) step() token.Token {
 
 	switch b {
 	case '#':
-		return l.comment()
+		l.comment()     // consume comment
+		return l.step() // return next token
 
 	case '"':
 		return l.str()
