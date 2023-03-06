@@ -1,7 +1,6 @@
 package ape
 
 import (
-	"fmt"
 	"os"
 	"unicode"
 
@@ -91,7 +90,6 @@ func (l *lexer) LexFile(file string) []token.Token {
 		panic(err)
 	}
 	tokens := l.lex()
-	fmt.Println(tokens)
 	return tokens
 }
 
@@ -167,14 +165,12 @@ func (l *lexer) pick(b byte, match token.Kind, noMatch token.Kind) token.Token {
 }
 
 func (l *lexer) shouldInsertSemi(current byte) bool {
-	fmt.Printf("current: %c\n", current)
 	if current != 0 && current != '\n' {
 		return false
 	}
 	if len(l.tokens) == 0 {
 		return false // no previous token to check
 	}
-	fmt.Println("check map")
 	return stmtEndTokens[l.tokens[len(l.tokens)-1].Kind]
 }
 

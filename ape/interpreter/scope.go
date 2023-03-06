@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/pcen/ape/ape/types"
 )
@@ -20,9 +21,21 @@ type Scope struct {
 
 /** Utility to make a scope before entering a function */
 func MakeFnScope(enclosing *Scope, vals []value, param_names []string) Scope {
-	v_map := make(map[string]value)
+	v_map := make(map[string]value, len(vals))
 	for i, v := range vals {
 		v_map[param_names[i]] = v
+	}
+
+	return Scope{
+		Enclosing: enclosing,
+		Values:    v_map,
+	}
+}
+
+func MakeVariadicFnScope(enclosing *Scope, vals []value) Scope {
+	v_map := make(map[string]value, len(vals))
+	for i, v := range vals {
+		v_map[strconv.FormatInt(int64(i), 10)] = v
 	}
 
 	return Scope{

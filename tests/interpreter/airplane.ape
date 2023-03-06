@@ -1,21 +1,17 @@
 func charge(name string) {
-	println("CHARGE:")
-	println(name)
+	println("CHARGE:", name)
 }
 
 func refund(name string) {
-	println("REFUND:")
-	println(name)
+	println("REFUND: ", name)
 }
 
 func reserveSeat(name string) {
-	println("RESERVE SEAT:")
-	println(name)
+	println("RESERVE SEAT: ", name)
 }
 
 func freeSeat(name string) {
-	println("FREE SEAT:")
-	println(name)
+	println("FREE SEAT: ", name)
 }
 
 func main() {

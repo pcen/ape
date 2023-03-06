@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/pcen/ape/ape/ast"
 	"github.com/pcen/ape/ape/token"
@@ -13,13 +14,18 @@ import (
 
 var NATIVE_FUNCTIONS = []val_native_func{
 	{
-		Name:   "println",
-		Params: []string{"val"},
+		Name: "println",
 		Fn: func(scope *Scope) value {
-			val := scope.Get("val")
-			println(val.ToString())
+			var sb strings.Builder
+			for i := 0; i < len(scope.Values); i++ {
+				index := strconv.FormatInt(int64(i), 10)
+				val := scope.Values[index]
+				sb.WriteString(val.ToString())
+			}
+			fmt.Println(sb.String())
 			return val_void{}
 		},
+		Variadic: true,
 	},
 	{
 		Name:   "read",
@@ -250,7 +256,12 @@ func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
 		return val_void{}
 
 	case val_native_func:
-		fn_scope := MakeFnScope(twi.GlobalScope, args, fn.Params)
+		var fn_scope Scope
+		if fn.Variadic {
+			fn_scope = MakeVariadicFnScope(twi.GlobalScope, args)
+		} else {
+			fn_scope = MakeFnScope(twi.GlobalScope, args, fn.Params)
+		}
 		return fn.Fn(&fn_scope)
 
 	default:
