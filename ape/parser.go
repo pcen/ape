@@ -421,7 +421,7 @@ func (p *parser) SimpleStmt(annotateable bool) ast.Statement {
 			p.err("@ at end of non-annotatable statement")
 		}
 		if !p.match(token.Identifier) {
-			p.err("@ must be followed by annotation name")
+			p.err("@ must be followed by annotation name, but got %v", p.peek())
 		}
 		annotations[p.prev().Lexeme] = p.SimpleStmt(false)
 	}
@@ -546,10 +546,8 @@ func (p *parser) SkipStmt() *ast.SkipStmt {
 func (p *parser) SeizeStmt() *ast.SeizeStmt {
 	s := &ast.SeizeStmt{}
 	p.consume(token.Seize, "seize stmt")
-	if p.peek().Kind == token.OpenParen {
-		p.consume(token.OpenParen, "start of exception type (expr) for seize")
+	if !p.peekIs(token.OpenBrace) {
 		s.Expr = p.Expression()
-		p.consume(token.CloseParen, "end of exception type (expr) for seize")
 	}
 	s.Body = p.BlockStmt()
 	return s

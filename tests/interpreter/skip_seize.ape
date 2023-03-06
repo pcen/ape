@@ -7,33 +7,33 @@ func foo(rev_type String) int {
     println("Enter FOO with rev_type " + rev_type)
     println("Set X to 1")
     x := 1
-    
-    SKIP {
+
+    skip {
         println("In Skip: Set X to 9")
         x = 3
-        SKIP{
+        skip {
             println("In Inner Skip:")
             x++
             x =  x + 3
-            
-            REVERSE nestedFoo(rev_type)
-        } SEIZE ("a") {
+
+            reverse nestedFoo(rev_type)
+        } seize ("a") {
             println("In Inner Seize a")
-        } SEIZE ("b") {
+        } seize ("b") {
             println("In Inner Seize b")
             x = 4
-            REVERSE nestedFoo("b")
+            reverse nestedFoo("b")
         }
 
         println("Continuing in skip")
         x++
 
-    } SEIZE ("a") {
+    } seize "a" {
         println("IN SEIZE A")
-    } SEIZE ("b") {
+    } seize "b" {
         println("IN SEIZE B")
         x ++
-    } SEIZE ("c") {
+    } seize "c" {
         x = 0
         println("IN SEIZE C")
     }

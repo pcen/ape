@@ -193,9 +193,9 @@ var (
 
 		At: "@",
 
-		Skip:    "SKIP",
-		Seize:   "SEIZE",
-		Reverse: "REVERSE",
+		Skip:    "skip",
+		Seize:   "seize",
+		Reverse: "reverse",
 	}
 
 	keywords = map[string]Kind{
@@ -222,9 +222,9 @@ var (
 		"module":      Module,
 		"import":      Import,
 
-		"SKIP":    Skip,
-		"SEIZE":   Seize,
-		"REVERSE": Reverse,
+		"skip":    Skip,
+		"seize":   Seize,
+		"reverse": Reverse,
 	}
 )
 

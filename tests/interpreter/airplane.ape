@@ -1,4 +1,3 @@
-
 func charge(name string) {
 	println("CHARGE:")
 	println(name)
@@ -21,12 +20,12 @@ func freeSeat(name string) {
 
 func main() {
 	name := "reenus"
-	SKIP {
-		charge(name) @reverse refund(name)
-		reserveSeat(name) @reverse freeSeat(name)
+	skip {
+		charge(name) @undo refund(name)
+		reserveSeat(name) @undo freeSeat(name)
 		# something went wrong...
-		REVERSE "error"
-	} SEIZE ("error") {
+		reverse "NO_SEATS"
+	} seize "NO_SEATS" {
 		println("side effects were undone")
 	}
 

@@ -10,12 +10,12 @@ func undo() {
 }
 
 func main() int {
-	SKIP {
+	skip {
 		a += 99
 		b += 10
-		set() @reverse undo()
-		REVERSE "DEFAULT"
-	} SEIZE ("DEFAULT") {
+		set() @undo undo()
+		reverse "DEFAULT"
+	} seize ("DEFAULT") {
 		println(b)
 	}
 	return a

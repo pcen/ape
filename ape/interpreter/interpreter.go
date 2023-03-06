@@ -83,7 +83,7 @@ func (twi *TWI) AddBreadCrumb(node ast.Node) {
 
 	case *ast.ExprStmt:
 		// only add bread crumb when the expression is annotated
-		if prevVal, ok := n.Annotations["reverse"]; ok {
+		if prevVal, ok := n.Annotations["undo"]; ok {
 			twi.LastBreadCrumb = &BreadCrumb{
 				Prev:    twi.LastBreadCrumb,
 				Scope:   twi.CurrentScope,

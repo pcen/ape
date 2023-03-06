@@ -25,7 +25,7 @@ stmt           -> simpleStmt | compoundStmt | varDeclStmt
 simpleStmt     -> incStmt | reverseStmt | assignment | expr
 
 incStmt        -> expr ("++" | "--")
-reverseStmt    -> ( "REVERSE" expr ) | ( "REVERSE" )
+reverseStmt    -> ( "reverse" expr ) | ( "reverse" )
 assignment     -> expr assignOp expr
 assignOp       -> "=" | "+=" | "*=" | "-=" | "/=" | "**=" | "%="
 
@@ -33,8 +33,8 @@ compoundStmt   -> ifStmt | forStmt | skipStmt
 
 ifStmt         -> "if" condBlockStmt "else" blockStmt
 condBlockStmt  -> equality blockStmt
-skipStmt       -> "SKIP" "{" blockStmt "}" seizeStmt seizeStmt*
-seizeStmt      -> ( "SEIZE" "(" expr ")" "{" blockStmt "}" ) | ( "SEIZE" "{" blockStmt "}" )
+skipStmt       -> "skip" "{" blockStmt "}" seizeStmt seizeStmt*
+seizeStmt      -> ( "seize" expr "{" blockStmt "}" ) | ( "seize" "{" blockStmt "}" )
 
 forStmt        -> "for" varDecl ";" expr ";" simpleStmt blockStmt
 
