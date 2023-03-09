@@ -1,4 +1,6 @@
 func main() int {
+	touch("tests/resources/tmp.txt")
+	delete("tests/resources/tmp.txt")
 	names := read("tests/resources/names.txt")
 	println("NAMES BELOW")
 	println(names)
