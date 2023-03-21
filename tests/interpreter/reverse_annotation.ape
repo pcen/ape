@@ -15,7 +15,7 @@ func main() int {
 		b += 10
 		set() @undo undo()
 		reverse "DEFAULT"
-	} seize ("DEFAULT") {
+	} seize "DEFAULT" {
 		println(b)
 	}
 	return a

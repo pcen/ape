@@ -278,6 +278,8 @@ func (p *parser) Atom() ast.Expression {
 		return p.GroupExpr()
 	case token.OpenBrack:
 		return p.LitList()
+	case token.OpenBrace:
+		return p.LitMap()
 	default:
 		p.err("invalid token for expression: %v", p.peek())
 		return nil // err unwinds stack
@@ -303,6 +305,22 @@ func (p *parser) LitList() ast.Expression {
 	}
 	p.consume(token.CloseBrack, "end of list literal")
 	return &ast.LitListExpr{Elements: elements}
+}
+
+func (p *parser) LitMap() ast.Expression {
+	p.consume(token.OpenBrace, "start of map literal")
+	elements := make(map[ast.Expression]ast.Expression)
+	for !p.peekIs(token.CloseBrace) {
+		k := p.Expression()
+		p.consume(token.Colon, "colon separates map key and value in kvp")
+		v := p.Expression()
+		if p.peekIs(token.Comma) {
+			p.consume(token.Comma, "comma separates map key-value pairs")
+		}
+		elements[k] = v
+	}
+	p.consume(token.CloseBrace, "end of map literal")
+	return &ast.LitMapExpr{Elements: elements}
 }
 
 // Statements

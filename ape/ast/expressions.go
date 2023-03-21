@@ -137,3 +137,17 @@ type LitListExpr struct {
 func (e *LitListExpr) ExprStr() string {
 	return fmt.Sprint("(", exprListStr(e.Elements), ")")
 }
+
+type LitMapExpr struct {
+	Elements map[Expression]Expression
+}
+
+func (e *LitMapExpr) ExprStr() string {
+	var sb strings.Builder
+	sb.WriteString("{\n")
+	for k, v := range e.Elements {
+		sb.WriteString(fmt.Sprintf("\t%v: %v", k.ExprStr(), v.ExprStr()))
+	}
+	sb.WriteString("}")
+	return sb.String()
+}

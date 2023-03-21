@@ -162,6 +162,28 @@ var (
 	StringList = NewList(String)
 )
 
+type Map struct {
+	Key   Type
+	Value Type
+}
+
+func NewMap(key Type, value Type) Type {
+	return Map{Key: key, Value: value}
+}
+
+func (m Map) Is(other Type) bool {
+	o, ok := other.(Map)
+	return ok && m.Key.Is(o.Key) && m.Value.Is(o.Value)
+}
+
+func (m Map) String() string {
+	return fmt.Sprintf("{%v:%v}", m.Key, m.Value)
+}
+
+func (m Map) Underlying() Type {
+	return m
+}
+
 // assert all types implement Type interface
 var (
 	_ Type = Invalid
