@@ -1,0 +1,13 @@
+m := {"alex": 100}
+
+func main() int {
+	skip {
+		m["alex"] += 99
+		println(m)
+		reverse "DEFAULT"
+	} seize "DEFAULT" {
+		println("REVERSED")
+	}
+	println(m)
+	return 0
+}
