@@ -28,7 +28,12 @@ type BreadCrumb struct {
 func (bc BreadCrumb) Reverse(twi *TWI) {
 	switch t := bc.PrevVal.(type) {
 	case value:
-		bc.Scope.Set(bc.Name, t)
+		switch v_type := t.(type) {
+		case val_index_val_pair:
+			bc.Scope.Get(bc.Name).(val_map).Data[v_type.Index] = v_type.Value
+		default:
+			bc.Scope.Set(bc.Name, t)
+		}
 	case ast.Statement:
 		twi.executeStmt(t)
 	}

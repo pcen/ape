@@ -30,6 +30,20 @@ func (v val_void) ToString() string {
 	return "VOID"
 }
 
+/** Needed to easily support breadcrumb reversal for maps */
+type val_index_val_pair struct {
+	Index value
+	Value value
+}
+
+func (vivp val_index_val_pair) Equals(other value) bool {
+	return false
+}
+
+func (vivp val_index_val_pair) ToString() string {
+	return vivp.Index.ToString() + ": " + vivp.Value.ToString()
+}
+
 type val_native_func struct {
 	Name     string
 	Params   []string

@@ -95,19 +95,25 @@ func (twi *TWI) AddBreadCrumb(node ast.Node) {
 	switch n := node.(type) {
 	case *ast.AssignmentStmt:
 
-		name := ""
 		switch t := n.Lhs.(type) {
 		case *ast.IndexExpr:
-			name = t.Expr.ExprStr()
+			name := t.Expr.ExprStr()
+			m := twi.evaluateExpr(t.Expr).(val_map)
+			idx := twi.evaluateExpr(t.Index)
+			twi.LastBreadCrumb = &BreadCrumb{
+				Prev:    twi.LastBreadCrumb,
+				Scope:   twi.CurrentScope.GetScope(name),
+				Name:    name,
+				PrevVal: val_index_val_pair{Index: idx, Value: m.Data[idx]},
+			}
 		default:
-			name = t.ExprStr()
-		}
-
-		twi.LastBreadCrumb = &BreadCrumb{
-			Prev:    twi.LastBreadCrumb,
-			Scope:   twi.CurrentScope.GetScope(name),
-			Name:    name,
-			PrevVal: twi.CurrentScope.Get(name),
+			name := t.ExprStr()
+			twi.LastBreadCrumb = &BreadCrumb{
+				Prev:    twi.LastBreadCrumb,
+				Scope:   twi.CurrentScope.GetScope(name),
+				Name:    name,
+				PrevVal: twi.CurrentScope.Get(name),
+			}
 		}
 
 	case *ast.ExprStmt:
