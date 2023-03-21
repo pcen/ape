@@ -2,7 +2,7 @@ func nestedFoo(rev_type Sting) int {
     x := 1
     skip {
         return x
-    } seize ("a") {
+    } seize "a" {
         println("In NestedFoo Seize")
     }
 
@@ -15,14 +15,14 @@ func foo(rev_type String) int {
     skip {
         x = x + nestedFoo(rev_type)
         reverse rev_type
-    } seize ("a") {
+    } seize "a" {
         println("In FOO Seize")
     }
     return x
 }
 
 func main() int {
-    sum :=  foo("a")
+    sum := foo("a")
 
     println("The sum is: ")
 

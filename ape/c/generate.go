@@ -172,6 +172,9 @@ func (cg *codegen) expr(expr ast.Expression) {
 			panic("cannot codegen for literal expr of type " + e.Kind.String())
 		}
 
+	case *ast.LitMapExpr:
+		fmt.Println("unimplemented: map literals not implemented in c code gen")
+
 	case *ast.IdentExpr:
 		cg.write(e.Ident.Lexeme)
 

@@ -77,6 +77,8 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 		c.CheckExpr(e.Index)
 		if list, ok := t.(List); ok {
 			t = list.Data
+		} else if m, ok := t.(Map); ok {
+			t = m.Value
 		} else {
 			panic("cannot index into non-list type")
 		}
@@ -92,6 +94,25 @@ func (c *Checker) CheckExpr(expr ast.Expression) (t Type) {
 			}
 		}
 		t = NewList(t)
+
+	case *ast.LitMapExpr:
+		var kt Type = nil
+		var vt Type = nil
+		for k, v := range e.Elements {
+			if kt == nil && vt == nil {
+				kt = c.CheckExpr(k)
+				vt = c.CheckExpr(v)
+			} else {
+				currentKt := c.CheckExpr(k)
+				currentVt := c.CheckExpr(v)
+				if currentKt != kt {
+					panic("key type in map does not match first key type")
+				} else if currentVt != vt {
+					panic("value type in map does not match first value type")
+				}
+			}
+		}
+		t = NewMap(kt, vt)
 
 	default:
 		panic(fmt.Sprintf("cannot type check expressions of type %v", reflect.TypeOf(expr)))

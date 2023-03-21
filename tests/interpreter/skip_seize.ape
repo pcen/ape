@@ -17,9 +17,9 @@ func foo(rev_type String) int {
             x =  x + 3
 
             reverse nestedFoo(rev_type)
-        } seize ("a") {
+        } seize "a" {
             println("In Inner Seize a")
-        } seize ("b") {
+        } seize "b" {
             println("In Inner Seize b")
             x = 4
             reverse nestedFoo("b")
