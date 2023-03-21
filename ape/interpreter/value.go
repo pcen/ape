@@ -72,6 +72,40 @@ func (v val_func) ToString() string {
 // 	Data []T
 // }
 
+type val_map struct {
+	Data map[value]value
+}
+
+func (m val_map) Equals(other value) bool {
+	switch t := other.(type) {
+	case val_map:
+		if len(m.Data) != len(t.Data) {
+			return false
+		}
+
+		for k, v := range m.Data {
+			o_v, exists := t.Data[k]
+			if !exists {
+				return false
+			}
+			if !v.Equals(o_v) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
+func (m val_map) ToString() string {
+	out := ""
+	for k, v := range m.Data {
+		out += k.ToString() + ": " + v.ToString() + ", "
+	}
+	return out[:len(out)-2]
+}
+
 type val_bool struct {
 	Value bool
 }

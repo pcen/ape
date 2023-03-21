@@ -94,7 +94,15 @@ func (twi *TWI) AddBreadCrumb(node ast.Node) {
 
 	switch n := node.(type) {
 	case *ast.AssignmentStmt:
-		name := n.Lhs.ExprStr()
+
+		name := ""
+		switch t := n.Lhs.(type) {
+		case *ast.IndexExpr:
+			name = t.Expr.ExprStr()
+		default:
+			name = t.ExprStr()
+		}
+
 		twi.LastBreadCrumb = &BreadCrumb{
 			Prev:    twi.LastBreadCrumb,
 			Scope:   twi.CurrentScope.GetScope(name),
@@ -152,7 +160,12 @@ func (twi *TWI) evaluateExpr(expr ast.Expression) value {
 		return twi.visitGroupExpr(t)
 	case *ast.CallExpr:
 		return twi.visitCallExpr(t)
+	case *ast.LitMapExpr:
+		return twi.visitLitMapExpr(t)
+	case *ast.IndexExpr:
+		return twi.visitIndexExpr(t)
 	default:
+		print(expr.ExprStr())
 		panic(fmt.Sprintf("Expression type cannot be evaluated: %+v", t))
 	}
 }
@@ -237,6 +250,21 @@ func (twi *TWI) visitUnaryExpr(unary *ast.UnaryOp) value {
 
 func (twi *TWI) visitGroupExpr(group *ast.GroupExpr) value {
 	return twi.evaluateExpr(group.Expr)
+}
+
+func (twi *TWI) visitIndexExpr(idxExpr *ast.IndexExpr) value {
+	m := twi.evaluateExpr(idxExpr.Expr).(val_map)
+	return m.Data[twi.evaluateExpr(idxExpr.Index)]
+}
+
+func (twi *TWI) visitLitMapExpr(mapVal *ast.LitMapExpr) value {
+	val := val_map{Data: map[value]value{}}
+	for k, v := range mapVal.Elements {
+		res_k := twi.evaluateExpr(k)
+		res_v := twi.evaluateExpr(v)
+		val.Data[res_k] = res_v
+	}
+	return val
 }
 
 func (twi *TWI) visitCallExpr(expr *ast.CallExpr) (return_val value) {
@@ -379,8 +407,15 @@ func (twi *TWI) visitReturnStmt(ret *ast.ReturnStmt) {
 func (twi *TWI) visitAssignmentStmt(stmt *ast.AssignmentStmt) {
 	// TODO: This only works for simple name assignments
 	twi.AddBreadCrumb(stmt)
-	name := stmt.Lhs.ExprStr()
-	twi.CurrentScope.Set(name, twi.evaluateExpr(stmt.Rhs))
+
+	switch t := stmt.Lhs.(type) {
+	case *ast.IndexExpr:
+		m := twi.evaluateExpr(t.Expr).(val_map)
+		m.Data[twi.evaluateExpr(t.Index)] = twi.evaluateExpr(stmt.Rhs)
+	default:
+		name := t.ExprStr()
+		twi.CurrentScope.Set(name, twi.evaluateExpr(stmt.Rhs))
+	}
 }
 
 func (twi *TWI) visitIncStmt(inc *ast.IncStmt) {

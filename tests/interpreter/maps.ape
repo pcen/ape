@@ -1,0 +1,7 @@
+func main (argv []string) int {
+	a := {"reenus": "butthead"}
+	println(a["reenus"])
+	a["reenus"] = "beevus"
+	println(a["reenus"])
+	return 0
+}
