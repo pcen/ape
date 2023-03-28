@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -39,6 +40,18 @@ var NATIVE_FUNCTIONS = []val_native_func{
 		},
 	},
 	{
+		Name:   "write",
+		Params: []string{"filename", "data"},
+		Fn: func(scope *Scope) {
+			filename := scope.Get("filename").(val_str)
+			content := scope.Get("data").(val_str)
+			err := os.WriteFile(filename.Value, []byte(content.Value), os.ModePerm)
+			if err != nil {
+				panic(err)
+			}
+		},
+	},
+	{
 		Name:   "touch",
 		Params: []string{"filename"},
 		Fn: func(scope *Scope) {
@@ -52,6 +65,26 @@ var NATIVE_FUNCTIONS = []val_native_func{
 		Fn: func(scope *Scope) {
 			filename := scope.Get("filename").(val_str)
 			os.Remove(filename.Value)
+		},
+	},
+	{
+		Name:   "shell",
+		Params: []string{"cmd"},
+		Fn: func(scope *Scope) {
+			cmdstr := scope.Get("cmd").(val_str).Value
+			// split := strings.Split(cmdstr, " ")
+			// name := split[0]
+			// args := []string{}
+			// if len(split) > 1 {
+			// 	args = split[1:]
+			// }
+			// fmt.Println(args)
+			cmd := exec.Command("bash", "-c", cmdstr)
+			b, _ := cmd.CombinedOutput()
+			// if err != nil {
+			// 	panic(err)
+			// }
+			fmt.Printf("%s", b)
 		},
 	},
 }
@@ -147,8 +180,8 @@ func (twi *TWI) RunMain() {
 		Callee: ast.NewIdentExpr(token.NewLexeme(token.Identifier, "main", token.Position{1, 1})),
 		Args:   []ast.Expression{},
 	}
-	resp := twi.evaluateExpr(&call_expr)
-	println(resp.(val_int).Value)
+	twi.evaluateExpr(&call_expr)
+	// println(resp.(val_int).Value)
 }
 
 // ====== TESTING =====

@@ -1,0 +1,47 @@
+bank  := { "bingus": 20 }
+seats := { "bingus": "none" }
+
+func showBalance(name string) {
+	println(name, "'s balance: ", bank[name])
+}
+
+func showSeat(name string) {
+	if seats[name] == "none" {
+		println(name, " has no seat.")
+	} else {
+		println(name, " has a ", seats[name], " seat.")
+	}
+}
+
+func charge(name string) {
+	bank[name] -= 10
+}
+
+func reserveSeat(name string) {
+	seats[name] = "window"
+}
+
+func main() {
+	name := "bingus"
+	println("Before:")
+	showBalance(name)
+	showSeat(name)
+	println("")
+
+	skip {
+		charge(name)
+		reserveSeat(name)
+
+		println("After update:")
+		showBalance(name)
+		showSeat(name)
+		println("")
+
+		reverse "NO_SEATS" # something went wrong!!!
+	} seize "NO_SEATS" {
+		println("After automatic reversal:")
+		showBalance(name)
+		showSeat(name)
+	}
+	return 0
+}

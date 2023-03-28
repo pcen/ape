@@ -1,0 +1,19 @@
+func main() {
+	file := "./demo.txt"
+	skip {
+		touch(file) @undo delete(file)
+		write(file, "hello uwaterloo")
+		text := read(file)
+		println("file content: ", text)
+		println("ls output:")
+		shell("ls ./*demo.txt")
+
+		# do something with the file that errors out...
+		reverse "IOERR"
+	} seize "IOERR" {
+		println("file removed by @undo annotation in skip block")
+		println("ls output:")
+		shell("ls ./*demo.txt")
+	}
+	return 0
+}
